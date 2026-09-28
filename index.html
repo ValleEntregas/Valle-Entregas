@@ -1,390 +1,723 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Valle Entregas 🛵</title>
-
-<style>
-*{
-    box-sizing:border-box;
-    margin:0;
-    padding:0;
-    font-family:Arial,sans-serif;
-}
-
-body{
-    background:#080808;
-    color:white;
-}
-
-header{
-    background:#000;
-    padding:25px 15px;
-    text-align:center;
-    border-bottom:2px solid #d4af37;
-}
-
-.logo{
-    font-size:30px;
-    font-weight:bold;
-    color:#d4af37;
-}
-
-.slogan{
-    color:#ddd;
-    margin-top:7px;
-    font-size:14px;
-}
-
-.container{
-    max-width:600px;
-    margin:auto;
-    padding:20px;
-}
-
-.card{
-    background:#111;
-    border:1px solid #333;
-    border-radius:15px;
-    padding:20px;
-    margin-bottom:18px;
-    box-shadow:0 5px 20px #000;
-}
-
-h2{
-    color:#d4af37;
-    margin-bottom:15px;
-}
-
-label{
-    display:block;
-    margin-top:13px;
-    margin-bottom:6px;
-    color:#ddd;
-}
-
-input,textarea,select{
-    width:100%;
-    padding:13px;
-    border-radius:8px;
-    border:1px solid #555;
-    background:#1b1b1b;
-    color:white;
-    font-size:16px;
-}
-
-textarea{
-    min-height:90px;
-    resize:vertical;
-}
-
-button{
-    width:100%;
-    padding:15px;
-    margin-top:15px;
-    border:none;
-    border-radius:10px;
-    background:#d4af37;
-    color:#000;
-    font-size:17px;
-    font-weight:bold;
-    cursor:pointer;
-}
-
-button:active{
-    transform:scale(.98);
-}
-
-.location{
-    background:#151515;
-    border:1px solid #444;
-    padding:15px;
-    border-radius:10px;
-    margin-top:10px;
-}
-
-#resultado{
-    margin-top:12px;
-    line-height:1.6;
-}
-
-.precio{
-    color:#d4af37;
-    font-size:22px;
-    font-weight:bold;
-}
-
-footer{
-    text-align:center;
-    padding:25px;
-    color:#888;
-    font-size:13px;
-}
-
-.success{
-    color:#58d68d;
-}
-
-.error{
-    color:#ff6961;
-}
-</style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Valle Entregas | De todo, hasta tu puerta</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#f2c94c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Valle Entregas">
+    <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/d/1cIaAAliaMiiCfHTzGE0m3fTqj3URSwn0">
+    
+    <style>
+        :root{--gold:#f2c94c;--gold2:#d4a82f;--green:#2d503c;--bg:#090b09;--panel:#141814;--line:#343a32;--text:#f5f5ef;--muted:#b8bdb4;--red:#ff7777;--ok:#4ade80;--warn:#facc15}
+        *{box-sizing:border-box}
+        body{margin:0;background:var(--bg);color:var(--text);font:16px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+        header{background:linear-gradient(135deg,#050605,#1b281e);border-bottom:2px solid var(--gold);padding:14px;text-align:center}
+        .brand{font-size:clamp(22px,5vw,34px);font-weight:900;color:var(--gold);letter-spacing:1px}
+        .brand-logo{display:block;width:min(100%,320px);max-height:180px;object-fit:contain;margin:0 auto 6px}
+        .tag{color:#eee;font-size:13px;margin-top:2px}
+        nav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:10px;background:#101310;position:sticky;top:0;z-index:1000}
+        button,.btn{background:var(--gold);color:#15150f;border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-block;font-size:15px}
+        button.secondary,.btn.secondary{background:#27372b;color:#fff;border:1px solid var(--gold)}
+        button.danger{background:#7d2929;color:white}
+        button:disabled{opacity:.5;cursor:not-allowed}
+        main{max-width:960px;margin:14px auto;padding:0 12px 30px}
+        .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 6px 20px #0005}
+        h1,h2,h3{color:var(--gold);margin-top:0}
+        label{display:block;font-weight:700;margin:10px 0 5px}
+        input,select,textarea{width:100%;padding:11px;border:1px solid #4b5148;background:#090c09;color:white;border-radius:9px;font:inherit}
+        textarea{min-height:80px;resize:vertical}
+        .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+        .muted{color:var(--muted);font-size:14px}
+        .notice{background:#2c2919;border:1px solid #79672c;border-radius:10px;padding:12px;color:#f6e6a4;margin:10px 0}
+        .notice.success{background:rgba(74,222,128,.1);border-color:#4ade80;color:#9be3a5}
+        .notice.error{background:rgba(255,119,119,.1);border-color:#ff7777;color:#ffb3b3}
+        .status-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;margin-bottom:14px;background:rgba(255,255,255,.05)}
+        .status-dot{width:12px;height:12px;border-radius:50%;animation:pulso 2s infinite}
+        .status-dot.online{background:var(--ok);box-shadow:0 0 10px var(--ok)}
+        .status-dot.offline{background:var(--red);box-shadow:0 0 10px var(--red)}
+        @keyframes pulso{0%{opacity:1}50%{opacity:.4}100%{opacity:1}}
+        .dispo-buttons{display:flex;gap:10px;margin:10px 0}
+        .dispo-buttons button{flex:1}
+        .dispo-buttons button.online-btn{background:var(--ok);color:#0a2e1f}
+        .dispo-buttons button.offline-btn{background:var(--red);color:#2e0f0f}
+        .order{border:1px solid #454b40;border-radius:12px;padding:14px;margin:12px 0;background:#0d100d;transition:transform .2s}
+        .order:hover{transform:translateY(-2px)}
+        .order.nuevo{border-color:var(--gold);box-shadow:0 0 12px rgba(242,201,76,.3);animation:resaltar 1s ease-out}
+        @keyframes resaltar{0%{box-shadow:0 0 20px rgba(242,201,76,.5)}100%{box-shadow:0 0 12px rgba(242,201,76,.3)}}
+        .pill{display:inline-block;padding:4px 9px;border-radius:99px;background:#334934;color:#c9f3c8;font-size:12px;font-weight:800}
+        .pill.nuevo{background:var(--gold);color:#000;font-weight:900}
+        .pill.aceptado{background:#60a5fa;color:#dbeafe}
+        .pill.entregado{background:var(--ok);color:#dcfce7}
+        .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+        .oferta-box{background:rgba(242,201,76,.1);border:1px solid var(--gold);border-radius:10px;padding:10px;margin:8px 0}
+        .precio-oferta{font-size:22px;font-weight:900;color:var(--gold)}
+        footer{text-align:center;color:var(--muted);padding:18px;font-size:12px}
+        .oculto{display:none !important}
+        #mapPickup,#mapDrop{height:220px;border-radius:12px;overflow:hidden;margin-top:8px}
+        .alerta-flotante{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#f2c94c,#d4a82f);color:#000;padding:14px 20px;border-radius:12px;box-shadow:0 5px 25px rgba(242,201,76,.4);z-index:9999;text-align:center;max-width:92%;font-weight:700;animation:subir .3s ease-out}
+        @keyframes subir{from{transform:translateY(-100%) translateX(-50%);opacity:0}to{transform:translateX(-50%);opacity:1}}
+    </style>
 </head>
-
 <body>
-
 <header>
-    <div class="logo">🏍️ VALLE ENTREGAS</div>
-    <div class="slogan">De todo, hasta tu puerta.</div>
+    <img class="brand-logo" src="https://lh3.googleusercontent.com/d/1cIaAAliaMiiCfHTzGE0m3fTqj3URSwn0" alt="Logo Valle Entregas">
+    <div class="brand">VALLE ENTREGAS</div>
+    <div class="tag">De todo, hasta tu puerta.</div>
+    <div class="tag">Yaruquí · Pifo · El Quinche · Cumbayá</div>
 </header>
 
-<div class="container">
+<nav>
+    <button onclick="showView('cliente')">Pedir entrega</button>
+    <button class="secondary" onclick="showView('motorizado')">🏍️ Motorizado</button>
+</nav>
 
-<div class="card">
-    <h2>📍 Tu ubicación</h2>
+<main>
+    <div class="notice" id="configWarn">⚙️ Conectando sistema...</div>
 
-    <button onclick="obtenerUbicacion()">
-        📍 USAR MI UBICACIÓN ACTUAL
-    </button>
+    <!-- ========== CLIENTE ========== -->
+    <section id="clienteView">
+        <div class="card">
+            <h1>Solicita tu entrega</h1>
+            <p class="muted">Marca los puntos y envía tu solicitud. Los motorizados disponibles verán tu oferta.</p>
 
-    <div class="location">
-        <div id="ubicacionTexto">
-            Aún no has seleccionado tu ubicación.
+            <form id="orderForm">
+                <div class="grid">
+                    <div>
+                        <label for="nombre">Tu nombre</label>
+                        <input id="nombre" required maxlength="100" placeholder="Nombre y apellido">
+                    </div>
+                    <div>
+                        <label for="telefono">Tu WhatsApp</label>
+                        <input id="telefono" required inputmode="tel" maxlength="20" placeholder="09xxxxxxxx">
+                    </div>
+                </div>
+
+                <h3>📍 Recogida</h3>
+                <div class="grid">
+                    <div>
+                        <label for="zonaRecogida">Sector</label>
+                        <select id="zonaRecogida">
+                            <option value="yaruqui">Yaruquí</option>
+                            <option value="pifo">Pifo</option>
+                            <option value="quinche">El Quinche</option>
+                            <option value="cumbaya">Cumbayá</option>
+                            <option value="otra">Otro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="refRecogida">Referencia</label>
+                        <input id="refRecogida" required placeholder="Calle, local, punto de referencia">
+                    </div>
+                </div>
+                <div id="mapPickup"></div>
+                <div class="actions">
+                    <button type="button" class="secondary" onclick="useGPS('pickup')">📍 Mi ubicación</button>
+                </div>
+
+                <h3>🏠 Entrega</h3>
+                <div class="grid">
+                    <div>
+                        <label for="zonaEntrega">Sector</label>
+                        <select id="zonaEntrega">
+                            <option value="yaruqui">Yaruquí</option>
+                            <option value="pifo">Pifo</option>
+                            <option value="quinche">El Quinche</option>
+                            <option value="cumbaya">Cumbayá</option>
+                            <option value="otra">Otro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="refEntrega">Referencia</label>
+                        <input id="refEntrega" required placeholder="Dirección de entrega">
+                    </div>
+                </div>
+                <div id="mapDrop"></div>
+                <div class="actions">
+                    <button type="button" class="secondary" onclick="useGPS('drop')">📍 Mi ubicación</button>
+                </div>
+
+                <label for="detalle">📦 ¿Qué entregamos?</label>
+                <textarea id="detalle" maxlength="1000" placeholder="Tienda, productos, instrucciones..."></textarea>
+
+                <div class="notice" id="fareBox">Tarifa mínima: se calcula al marcar los puntos</div>
+
+                <label for="ofertaTarifa">💰 Tu oferta</label>
+                <input id="ofertaTarifa" type="text" inputmode="decimal" placeholder="Ej: 4,50">
+                <div class="muted" id="offerHelp">No menor a la tarifa mínima</div>
+
+                <button type="submit" id="submitOrder">✅ ENVIAR SOLICITUD</button>
+            </form>
+            <div id="clientMsg"></div>
         </div>
-    </div>
-</div>
 
-<div class="card">
+        <div class="card">
+            <h2>🔍 Rastrear pedido</h2>
+            <input id="trackId" placeholder="Código de pedido">
+            <div class="actions"><button onclick="trackOrder()">🔍 VER ESTADO</button></div>
+            <div id="trackResult"></div>
+        </div>
+    </section>
 
-    <h2>🛵 Solicitar entrega</h2>
+    <!-- ========== MOTORIZADO ========== -->
+    <section id="riderView" hidden>
+        <div class="card">
+            <h1>🏍️ Panel del Motorizado</h1>
 
-    <label>Nombre</label>
-    <input id="nombre" type="text" placeholder="Tu nombre">
+            <div class="status-bar">
+                <span id="statusDot" class="status-dot offline"></span>
+                <span id="statusText"><b>Estado:</b> Fuera de servicio</span>
+            </div>
 
-    <label>Teléfono</label>
-    <input id="telefono" type="tel" placeholder="Tu número">
+            <div class="dispo-buttons">
+                <button class="online-btn" id="btnDisponible" onclick="setDisponible(true)">✅ ESTOY DISPONIBLE</button>
+                <button class="offline-btn" id="btnNoDisponible" onclick="setDisponible(false)">🔴 NO ESTOY DISPONIBLE</button>
+            </div>
 
-    <label>¿Qué necesitas?</label>
-    <textarea id="pedido" placeholder="Ejemplo: recoger comida en el restaurante X y llevarla a mi casa"></textarea>
+            <div class="grid" style="margin-top:14px">
+                <div>
+                    <label for="nombreMotorizado">Tu Nombre</label>
+                    <input id="nombreMotorizado" placeholder="Tu nombre completo">
+                </div>
+                <div>
+                    <label for="telefonoMotorizado">Tu WhatsApp</label>
+                    <input id="telefonoMotorizado" placeholder="09xxxxxxxx">
+                </div>
+            </div>
 
-    <label>Dirección de entrega</label>
-    <textarea id="direccion" placeholder="Escribe tu dirección"></textarea>
+            <div class="actions" style="margin-top:10px">
+                <button class="secondary" onclick="guardarUbicacion()">📍 ACTUALIZAR MI UBICACIÓN</button>
+                <button class="secondary" id="alertaBtn" onclick="toggleAlertas()">🔔 ACTIVAR ALERTAS</button>
+            </div>
+            <p class="muted" id="alertStatus">Activa las alertas para recibir aviso de nuevos pedidos</p>
+            <p class="muted" id="ubicacionStatus">Ubicación: No registrada</p>
 
-    <label>Referencia</label>
-    <input id="referencia" type="text" placeholder="Ejemplo: casa azul, junto al parque">
+            <hr style="border:none;border-top:1px solid #333;margin:14px 0">
 
-    <button onclick="calcularPedido()">
-        🧾 CALCULAR DELIVERY
-    </button>
+            <h2>📋 Pedidos Disponibles</h2>
+            <p class="muted">Toca ACEPTAR para tomar el pedido — quedará asignado a tu nombre</p>
+            <div id="ordersList">Cargando pedidos...</div>
+        </div>
+    </section>
+</main>
 
-    <div id="resultado"></div>
+<footer>Valle Entregas · De todo, hasta tu puerta.</footer>
 
-    <button onclick="enviarPedido()" id="btnEnviar" style="display:none;">
-        💬 ENVIAR PEDIDO POR WHATSAPP
-    </button>
-
-</div>
-
-<div class="card">
-
-    <h2>📦 ¿Cómo funciona?</h2>
-
-    <p style="line-height:1.7;color:#ccc;">
-        1️⃣ Escribe lo que necesitas.<br>
-        2️⃣ Comparte tu ubicación.<br>
-        3️⃣ Calculamos el delivery.<br>
-        4️⃣ Envías el pedido por WhatsApp.<br>
-        5️⃣ Valle Entregas coordina tu entrega. 🛵
-    </p>
-
-</div>
-
-</div>
-
-<footer>
-    Valle Entregas © 2026<br>
-    Yaruquí · Pifo · alrededores
-</footer>
-
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+// ===================================== CONFIGURACIÓN =====================================
+const SUPABASE_URL = "https://jxwtnvdpajaeummasozx.supabase.co";
+const SUPABASE_KEY = "sb_publishable__UkoBaXqLbrYu_U-H_yFWg_OGPnXY2N";
 
-let latitud = null;
-let longitud = null;
-let distancia = 0;
-let precioDelivery = 0;
+const sbReady = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("PEGA_AQUI");
+const db = sbReady ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-function obtenerUbicacion(){
+let pickup = null, dropoff = null, pickupMap = null, dropMap = null;
+let motorizadoUbicacion = null;
+let estaDisponible = false;
+let alertasActivas = false;
+let idsVistos = new Set();
+let canalTiempoReal = null;
+const center = [-0.1807, -78.4678];
+const $ = id => document.getElementById(id);
 
-    const texto = document.getElementById("ubicacionTexto");
-
-    texto.innerHTML = "📡 Buscando tu ubicación...";
-
-    if(!navigator.geolocation){
-
-        texto.innerHTML =
-        '<span class="error">❌ Tu dispositivo no permite obtener ubicación.</span>';
-
-        return;
+// ===================================== NAVEGACIÓN =====================================
+function showView(which) {
+    $('clienteView').hidden = which !== 'cliente';
+    $('riderView').hidden = which !== 'motorizado';
+    if (which === 'motorizado') {
+        cargarPedidosMotorizado();
+        recuperarEstadoMotorizado();
     }
+    setTimeout(() => {
+        if (pickupMap) pickupMap.invalidateSize();
+        if (dropMap) dropMap.invalidateSize();
+    }, 150);
+}
 
+// ===================================== MAPAS =====================================
+function initMaps() {
+    pickupMap = L.map('mapPickup').setView(center, 11);
+    dropMap = L.map('mapDrop').setView(center, 11);
+    const tiles = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    L.tileLayer(tiles, { attribution: '© OpenStreetMap' }).addTo(pickupMap);
+    L.tileLayer(tiles, { attribution: '© OpenStreetMap' }).addTo(dropMap);
+    pickupMap.on('click', e => fijarPunto('pickup', e.latlng.lat, e.latlng.lng));
+    dropMap.on('click', e => fijarPunto('drop', e.latlng.lat, e.latlng.lng));
+}
+
+function fijarPunto(which, lat, lng) {
+    if (which === 'pickup') {
+        pickup = { lat, lng };
+        if (window.markerRecogida) pickupMap.removeLayer(window.markerRecogida);
+        window.markerRecogida = L.marker([lat, lng]).addTo(pickupMap).bindPopup('📍 Recogida').openPopup();
+    } else {
+        dropoff = { lat, lng };
+        if (window.markerEntrega) dropMap.removeLayer(window.markerEntrega);
+        window.markerEntrega = L.marker([lat, lng]).addTo(dropMap).bindPopup('🏠 Entrega').openPopup();
+    }
+    calcularTarifa();
+}
+
+async function useGPS(which) {
+    if (!navigator.geolocation) return alert('❌ GPS no disponible');
+    const btn = event.target;
+    btn.disabled = true; btn.textContent = 'Buscando...';
+    
     navigator.geolocation.getCurrentPosition(
-
-        function(position){
-
-            latitud = position.coords.latitude;
-            longitud = position.coords.longitude;
-
-            texto.innerHTML =
-            '<span class="success">✅ Ubicación obtenida correctamente.</span><br>' +
-            'Latitud: ' + latitud.toFixed(6) + '<br>' +
-            'Longitud: ' + longitud.toFixed(6);
-
+        pos => {
+            fijarPunto(which, pos.coords.latitude, pos.coords.longitude);
+            (which === 'pickup' ? pickupMap : dropMap).setView([pos.coords.latitude, pos.coords.longitude], 16);
         },
+        () => alert('No se pudo obtener ubicación — marca manualmente'),
+        { enableHighAccuracy: true, timeout: 15000 }
+    );
+    setTimeout(() => { btn.disabled = false; btn.textContent = which === 'pickup' ? '📍 Mi ubicación' : '📍 Mi ubicación'; }, 2000);
+}
 
-        function(error){
+// ===================================== TARIFAS =====================================
+function calcularDistanciaKm() {
+    if (!pickup || !dropoff) return null;
+    const R = 6371, rad = n => n * Math.PI / 180;
+    const dLat = rad(dropoff.lat - pickup.lat);
+    const dLon = rad(dropoff.lng - pickup.lng);
+    const a = Math.sin(dLat/2)**2 + Math.cos(rad(pickup.lat)) * Math.cos(rad(dropoff.lat)) * Math.sin(dLon/2)**2;
+    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
 
-            let mensaje =
-            "No pudimos obtener tu ubicación.";
+function calcularTarifa() {
+    const km = calcularDistanciaKm();
+    const zona1 = $('zonaRecogida').value, zona2 = $('zonaEntrega').value;
+    const base = zona1 === zona2 ? 2.5 : 3.5;
+    const extraDist = km ? Math.max(0, km - 3) * 0.45 : 0;
+    const minima = Math.round((base + extraDist) * 100) / 100;
+    $('fareBox').textContent = `Tarifa mínima: $${minima.toFixed(2)} ${km ? `· ${km.toFixed(1)} km` : ''}`;
+    return minima;
+}
 
-            if(error.code === 1){
-                mensaje =
-                "❌ Permiso de ubicación rechazado. Activa el permiso de ubicación para este sitio.";
-            }
+function monto(valor) {
+    if (!valor) return NaN;
+    let t = String(valor).trim().replace(/\$/g,'').replace(/\./g, m => valor.includes(',') ? '' : '.');
+    return Number(t.replace(',', '.'));
+}
 
-            if(error.code === 2){
-                mensaje =
-                "❌ No se pudo encontrar tu ubicación.";
-            }
+$('ofertaTarifa')?.addEventListener('blur', () => {
+    const min = calcularTarifa();
+    const val = monto($('ofertaTarifa').value);
+    if (isNaN(val) || val < min) $('ofertaTarifa').value = min.toFixed(2).replace('.', ',');
+});
 
-            if(error.code === 3){
-                mensaje =
-                "❌ Se agotó el tiempo para obtener tu ubicación.";
-            }
+['zonaRecogida','zonaEntrega'].forEach(id => $(id)?.addEventListener('change', calcularTarifa));
 
-            texto.innerHTML =
-            '<span class="error">' + mensaje + '</span>';
+// ===================================== ENVIAR PEDIDO =====================================
+$('orderForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!db) return alert('Base de datos sin conexión');
+    
+    const nombre = $('nombre').value.trim();
+    const tel = $('telefono').value.trim();
+    const refRecog = $('refRecogida').value.trim();
+    const refEntr = $('refEntrega').value.trim();
+    const oferta = monto($('ofertaTarifa').value);
+    const minTarifa = calcularTarifa();
+    
+    if (!pickup || !dropoff) return alert('Marca ambos puntos en los mapas');
+    if (oferta < minTarifa) return alert(`Oferta mínima: $${minTarifa.toFixed(2)}`);
+    
+    const pedido = {
+        cliente_nombre: nombre,
+        cliente_telefono: tel,
+        recogida_zona: $('zonaRecogida').value,
+        recogida_referencia: refRecog,
+        recogida_lat: pickup.lat,
+        recogida_lng: pickup.lng,
+        entrega_zona: $('zonaEntrega').value,
+        entrega_referencia: refEntr,
+        entrega_lat: dropoff.lat,
+        entrega_lng: dropoff.lng,
+        detalle: $('detalle').value.trim() || 'Sin detalle',
+        distancia_km: calcularDistanciaKm() || 0,
+        tarifa_minima: minTarifa,
+        oferta: oferta,
+        estado: 'disponible'
+    };
+    
+    $('submitOrder').disabled = true;
+    const { data, error } = await db.from('pedidos').insert(pedido).select('id').single();
+    $('submitOrder').disabled = false;
+    
+    if (error) return alert('Error: ' + error.message);
+    
+    $('clientMsg').innerHTML = `<p class="notice success">✅ Pedido #${data.id} enviado. Esperando motorizado...</p>`;
+    $('trackId').value = data.id;
+});
 
+// ===================================== RASTREO =====================================
+async function trackOrder() {
+    const id = $('trackId').value.trim();
+    if (!id || !db) return;
+    const { data } = await db.from('pedidos').select('*').eq('id', id).single();
+    if (!data) return $('trackResult').textContent = 'No encontrado';
+    
+    const estadoTexto = {
+        disponible: '⏳ Disponible — esperando motorizado',
+        aceptado: '🏍️ Aceptado por ' + (data.motorizado_nombre || 'motorizado'),
+        recogido: '📦 En camino a entrega',
+        entregado: '✅ Entregado'
+    }[data.estado] || data.estado;
+    
+    $('trackResult').innerHTML = `
+        <div class="order">
+            <p><b>Estado:</b> ${estadoTexto}</p>
+            <p><b>Oferta:</b> $${data.oferta.toFixed(2)}</p>
+            ${data.motorizado_nombre ? `<p><b>Motorizado:</b> ${data.motorizado_nombre} · ${data.motorizado_telefono || ''}</p>` : ''}
+        </div>`;
+}
+
+// ===================================== MOTORIZADO: DISPONIBILIDAD =====================================
+function setDisponible(si) {
+    estaDisponible = si;
+    $('statusDot').className = `status-dot ${si ? 'online' : 'offline'}`;
+    $('statusText').innerHTML = `<b>Estado:</b> ${si ? '✅ DISPONIBLE — recibiendo pedidos' : '🔴 Fuera de servicio'}`;
+    $('btnDisponible').disabled = si;
+    $('btnNoDisponible').disabled = !si;
+    
+    localStorage.setItem('valleDisponible', si);
+    if (si) {
+        cargarPedidosMotorizado();
+        suscribirTiempoReal();
+    } else {
+        if (canalTiempoReal) canalTiempoReal.unsubscribe();
+    }
+}
+
+function recuperarEstadoMotorizado() {
+    if (localStorage.getItem('valleMotorizadoNombre')) {
+        $('nombreMotorizado').value = localStorage.getItem('valleMotorizadoNombre');
+        $('telefonoMotorizado').value = localStorage.getItem('valleMotorizadoTelefono');
+    }
+    const guardado = localStorage.getItem('valleDisponible');
+    if (guardado === 'true') setDisponible(true);
+}
+
+// ===================================== MOTORIZADO: UBICACIÓN =====================================
+async function guardarUbicacion() {
+    if (!navigator.geolocation) return alert('GPS no disponible');
+    const nombre = $('nombreMotorizado').value.trim();
+    const tel = $('telefonoMotorizado').value.trim();
+    if (!nombre || !tel) return alert('Escribe tu nombre y WhatsApp primero');
+    
+    navigator.geolocation.getCurrentPosition(
+        async pos => {
+            motorizadoUbicacion = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            $('ubicacionStatus').innerHTML = `Ubicación: ✅ Registrada`;
+            
+            localStorage.setItem('valleMotorizadoNombre', nombre);
+            localStorage.setItem('valleMotorizadoTelefono', tel);
+            localStorage.setItem('valleLat', pos.coords.latitude);
+            localStorage.setItem('valleLng', pos.coords.longitude);
+            
+            await db.from('motorizados').upsert({
+                nombre, telefono: tel, lat: pos.coords.latitude, lng: pos.coords.longitude, activo: estaDisponible, actualizado: new Date().toISOString()
+            });
+            
+            alert('✅ Ubicación guardada correctamente');
         },
-
-        {
-            enableHighAccuracy:true,
-            timeout:15000,
-            maximumAge:0
-        }
+        () => alert('❌ No se pudo obtener la ubicación'),
+        { enableHighAccuracy: true }
     );
 }
 
-
-function calcularPedido(){
-
-    const nombre =
-    document.getElementById("nombre").value.trim();
-
-    const pedido =
-    document.getElementById("pedido").value.trim();
-
-    const direccion =
-    document.getElementById("direccion").value.trim();
-
-    const resultado =
-    document.getElementById("resultado");
-
-    if(!nombre || !pedido || !direccion){
-
-        resultado.innerHTML =
-        '<span class="error">⚠️ Completa nombre, pedido y dirección.</span>';
-
+// ===================================== MOTORIZADO: CARGAR PEDIDOS =====================================
+async function cargarPedidosMotorizado() {
+    if (!db) return;
+    const { data, error } = await db.from('pedidos').select('*').in('estado', ['disponible','aceptado','recogido']).order('fecha', {ascending:false}).limit(25);
+    
+    if (error || !data) return;
+    if (!data.length) {
+        $('ordersList').innerHTML = '<p class="muted">No hay pedidos disponibles por ahora</p>';
         return;
     }
-
-    /*
-       Por ahora usamos una tarifa estimada.
-       Después podemos conectar un cálculo real
-       de distancia mediante mapas.
-    */
-
-    precioDelivery = 2.00;
-
-    resultado.innerHTML =
-    `
-    <div>
-        <strong>Delivery estimado:</strong><br>
-        <span class="precio">$${precioDelivery.toFixed(2)}</span>
-        <br><br>
-        El precio final puede variar según la distancia.
-    </div>
-    `;
-
-    document.getElementById("btnEnviar").style.display = "block";
+    
+    if (!$('nombreMotorizado').value && localStorage.getItem('valleMotorizadoNombre')) {
+        $('nombreMotorizado').value = localStorage.getItem('valleMotorizadoNombre');
+        $('telefonoMotorizado').value = localStorage.getItem('valleMotorizadoTelefono');
+    }
+    
+    const miTel = $('telefonoMotorizado').value.trim();
+    
+    $('ordersList').innerHTML = data.map(p => {
+        const esNuevo = !idsVistos.has(String(p.id));
+        if (esNuevo) idsVistos.add(String(p.id));
+        
+        let etiqueta = {
+            disponible: '<span class="pill nuevo">🆕 DISPONIBLE</span>',
+            aceptado: '<span class="pill aceptado">🏍️ EN CAMINO</span>',
+            recogido: '<span class="pill">📦 EN ENTREGA</span>'
+        }[p.estado];
+        
+        const mio = p.motorizado_telefono === miTel;
+        
+        return `
+        <div class="order ${esNuevo && p.estado === 'disponible' ? 'nuevo' : ''}">
+            ${etiqueta}
+            <p><b>Cliente:</b> ${p.cliente_nombre} · ${p.cliente_telefono}</p>
+            <p><b>Recoger:</b> ${p.recogida_zona} → ${p.recogida_referencia}</p>
+            <p><b>Entregar:</b> ${p.entrega_zona} → ${p.entrega_referencia}</p>
+            <p><b>Detalle:</b> ${p.detalle}</p>
+            <div class="oferta-box">
+                💰 Oferta del cliente: <span class="precio-oferta">$${p.oferta.toFixed(2)}</span>
+                <small>(Mínimo: $${p.tarifa_minima.toFixed(2)})</small>
+            </div>
+            ${p.estado === 'disponible' ? `
+            <div class="actions">
+                <button onclick="aceptarPedido(${p.id}, ${p.entrega_lat}, ${p.entrega_lng})">✅ ACEPTAR ESTE PEDIDO</button>
+                <button class="secondary" onclick="verRuta(${p.recogida_lat},${p.recogida_lng})">📍 Ver recogida</button>
+            </div>` : ''}
+            ${p.estado === 'aceptado' && mio ? `
+            <div class="actions">
+                <button onclick="marcarRecogido(${p.id})">📦 PEDIDO RECOGIDO</button>
+                <button class="secondary" onclick="verRuta(${p.entrega_lat},${p.entrega_lng})">📍 Ruta entrega</button>
+            </div>` : ''}
+            ${p.estado === 'recogido' && mio ? `
+            <div class="actions">
+                <button onclick="marcarEntregado(${p.id})">✅ MARCAR ENTREGADO</button>
+            </div>` : ''}
+            ${p.estado === 'aceptado' && !mio ? `<p class="muted">Aceptado por otro motorizado</p>` : ''}
+        </div>`;
+    }).join('');
 }
 
+// ===================================== TUS 3 FUNCIONES =====================================
 
-function enviarPedido(){
+async function aceptarPedido(id, lat, lng) {
+  if (!db) {
+    alert("❌ Base de datos no disponible.");
+    return;
+  }
 
-    const nombre =
-    document.getElementById("nombre").value.trim();
+  const nombre = $("nombreMotorizado").value.trim();
+  const tel = $("telefonoMotorizado").value.trim();
 
-    const telefono =
-    document.getElementById("telefono").value.trim();
+  if (!nombre || !tel) {
+    alert("⚠️ Escribe tu nombre y WhatsApp primero.");
+    return;
+  }
 
-    const pedido =
-    document.getElementById("pedido").value.trim();
+  if (!estaDisponible) {
+    alert("⚠️ Primero debes estar DISPONIBLE.");
+    return;
+  }
 
-    const direccion =
-    document.getElementById("direccion").value.trim();
+  const confirmar = confirm(
+    "¿Quieres aceptar este pedido?\n\n" +
+    "Al aceptarlo quedará asignado a ti."
+  );
 
-    const referencia =
-    document.getElementById("referencia").value.trim();
+  if (!confirmar) return;
 
-    let ubicacion =
-    "No compartida";
+  try {
+    const { data, error } = await db.rpc("aceptar_pedido", {
+      p_id: id,
+      p_nombre: nombre,
+      p_telefono: tel
+    });
 
-    if(latitud && longitud){
-
-        ubicacion =
-        "https://www.google.com/maps?q=" +
-        latitud + "," + longitud;
+    if (error) {
+      console.error(error);
+      alert("❌ No se pudo aceptar el pedido.");
+      return;
     }
 
-    const mensaje =
-`🛵 NUEVO PEDIDO - VALLE ENTREGAS
+    if (!data || data.length === 0) {
+      alert(
+        "⚠️ Este pedido ya fue aceptado por otro motorizado."
+      );
 
-👤 Nombre: ${nombre}
+      await cargarPedidosMotorizado();
+      return;
+    }
 
-📞 Teléfono: ${telefono || "No indicado"}
+    localStorage.setItem("valleMotorizadoNombre", nombre);
+    localStorage.setItem("valleMotorizadoTelefono", tel);
 
-📦 Pedido:
-${pedido}
+    alert("✅ ¡Pedido aceptado!");
 
-📍 Dirección:
-${direccion}
+    await cargarPedidosMotorizado();
 
-📝 Referencia:
-${referencia || "No indicada"}
-
-📍 Ubicación GPS:
-${ubicacion}
-
-💰 Delivery estimado:
-$${precioDelivery.toFixed(2)}
-
-Por favor confirmar el pedido.`;
-
-    const numero =
-    "593982773828";
-
-    const url =
-    "https://wa.me/" +
-    numero +
-    "?text=" +
-    encodeURIComponent(mensaje);
-
-    window.open(url,"_blank");
+  } catch (error) {
+    console.error(error);
+    alert("❌ Ocurrió un error al aceptar el pedido.");
+  }
 }
 
-</script>
+async function marcarRecogido(id) {
+  if (!db) {
+    alert("❌ Base de datos no disponible.");
+    return;
+  }
 
+  const tel = $("telefonoMotorizado").value.trim();
+
+  if (!tel) {
+    alert("⚠️ Escribe tu WhatsApp primero.");
+    return;
+  }
+
+  const confirmar = confirm(
+    "¿Ya recogiste el pedido?"
+  );
+
+  if (!confirmar) return;
+
+  try {
+    const { data, error } = await db.rpc(
+      "marcar_pedido_recogido",
+      {
+        p_id: id,
+        p_telefono: tel
+      }
+    );
+
+    if (error) {
+      console.error(error);
+      alert("❌ No se pudo actualizar el pedido.");
+      return;
+    }
+
+    if (!data) {
+      alert(
+        "⚠️ No puedes modificar este pedido.\n" +
+        "Puede que ya haya sido recogido o no esté asignado a ti."
+      );
+
+      await cargarPedidosMotorizado();
+      return;
+    }
+
+    alert("📦 Pedido marcado como RECOGIDO.");
+
+    await cargarPedidosMotorizado();
+
+  } catch (error) {
+    console.error(error);
+    alert("❌ Ocurrió un error.");
+  }
+}
+
+async function marcarEntregado(id) {
+  if (!db) {
+    alert("❌ Base de datos no disponible.");
+    return;
+  }
+
+  const tel = $("telefonoMotorizado").value.trim();
+
+  if (!tel) {
+    alert("⚠️ Escribe tu WhatsApp primero.");
+    return;
+  }
+
+  const confirmar = confirm(
+    "¿Confirmas que entregaste el pedido al cliente?"
+  );
+
+  if (!confirmar) return;
+
+  try {
+    const { data, error } = await db.rpc(
+      "marcar_pedido_entregado",
+      {
+        p_id: id,
+        p_telefono: tel
+      }
+    );
+
+    if (error) {
+      console.error(error);
+      alert("❌ No se pudo finalizar el pedido.");
+      return;
+    }
+
+    if (!data) {
+      alert(
+        "⚠️ No puedes finalizar este pedido.\n" +
+        "Debe estar recogido y asignado a tu número."
+      );
+
+      await cargarPedidosMotorizado();
+      return;
+    }
+
+    alert("✅ ¡Pedido entregado correctamente!");
+
+    await cargarPedidosMotorizado();
+
+  } catch (error) {
+    console.error(error);
+    alert("❌ Ocurrió un error.");
+  }
+}
+
+// ===================================== RUTA Y ALERTAS =====================================
+function verRuta(lat, lng) {
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+}
+
+function toggleAlertas() {
+    alertasActivas = !alertasActivas;
+    $('alertaBtn').textContent = alertasActivas ? '🔕 DESACTIVAR' : '🔔 ACTIVAR ALERTAS';
+    $('alertStatus').textContent = alertasActivas ? '✅ Revisando pedidos...' : 'Alertas desactivadas';
+    if (alertasActivas) suscribirTiempoReal();
+    else if (canalTiempoReal) canalTiempoReal.unsubscribe();
+}
+
+function suscribirTiempoReal() {
+    if (!db || canalTiempoReal) return;
+    canalTiempoReal = db.channel('pedidos-nuevos').on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'pedidos', filter: 'estado=eq.disponible'
+    }, payload => {
+        if (alertasActivas && estaDisponible) {
+            reproducirSonido();
+            mostrarAlerta(payload.new);
+            cargarPedidosMotorizado();
+        }
+    }).subscribe();
+}
+
+function mostrarAlerta(ped) {
+    const a = document.createElement('div');
+    a.className = 'alerta-flotante';
+    a.innerHTML = `🔔 NUEVO PEDIDO<br><b>${ped.recogida_zona} → ${ped.entrega_zona}</b><br>💰 $${ped.oferta.toFixed(2)}<br><button onclick="this.parentElement.remove()" style="margin-top:8px">Cerrar</button>`;
+    document.body.prepend(a);
+    setTimeout(() => a.remove(), 8000);
+}
+
+function reproducirSonido() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.value = 0.2;
+        osc.start(); osc.stop(ctx.currentTime + 0.2);
+    } catch(e){}
+}
+
+// ===================================== INICIO =====================================
+window.addEventListener('load', () => {
+    initMaps();
+    if (sbReady) {
+        $('configWarn').className = 'notice success';
+        $('configWarn').textContent = '✅ Sistema conectado y listo';
+    }
+});
+</script>
 </body>
 </html>
