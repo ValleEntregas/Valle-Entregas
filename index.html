@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Valle Entregas 🛵</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:Arial,sans-serif;
+}
+
+body{
+    background:#080808;
+    color:white;
+}
+
+header{
+    background:#000;
+    padding:25px 15px;
+    text-align:center;
+    border-bottom:2px solid #d4af37;
+}
+
+.logo{
+    font-size:30px;
+    font-weight:bold;
+    color:#d4af37;
+}
+
+.slogan{
+    color:#ddd;
+    margin-top:7px;
+    font-size:14px;
+}
+
+.container{
+    max-width:600px;
+    margin:auto;
+    padding:20px;
+}
+
+.card{
+    background:#111;
+    border:1px solid #333;
+    border-radius:15px;
+    padding:20px;
+    margin-bottom:18px;
+    box-shadow:0 5px 20px #000;
+}
+
+h2{
+    color:#d4af37;
+    margin-bottom:15px;
+}
+
+label{
+    display:block;
+    margin-top:13px;
+    margin-bottom:6px;
+    color:#ddd;
+}
+
+input,textarea,select{
+    width:100%;
+    padding:13px;
+    border-radius:8px;
+    border:1px solid #555;
+    background:#1b1b1b;
+    color:white;
+    font-size:16px;
+}
+
+textarea{
+    min-height:90px;
+    resize:vertical;
+}
+
+button{
+    width:100%;
+    padding:15px;
+    margin-top:15px;
+    border:none;
+    border-radius:10px;
+    background:#d4af37;
+    color:#000;
+    font-size:17px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+button:active{
+    transform:scale(.98);
+}
+
+.location{
+    background:#151515;
+    border:1px solid #444;
+    padding:15px;
+    border-radius:10px;
+    margin-top:10px;
+}
+
+#resultado{
+    margin-top:12px;
+    line-height:1.6;
+}
+
+.precio{
+    color:#d4af37;
+    font-size:22px;
+    font-weight:bold;
+}
+
+footer{
+    text-align:center;
+    padding:25px;
+    color:#888;
+    font-size:13px;
+}
+
+.success{
+    color:#58d68d;
+}
+
+.error{
+    color:#ff6961;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="logo">🏍️ VALLE ENTREGAS</div>
+    <div class="slogan">De todo, hasta tu puerta.</div>
+</header>
+
+<div class="container">
+
+<div class="card">
+    <h2>📍 Tu ubicación</h2>
+
+    <button onclick="obtenerUbicacion()">
+        📍 USAR MI UBICACIÓN ACTUAL
+    </button>
+
+    <div class="location">
+        <div id="ubicacionTexto">
+            Aún no has seleccionado tu ubicación.
+        </div>
+    </div>
+</div>
+
+<div class="card">
+
+    <h2>🛵 Solicitar entrega</h2>
+
+    <label>Nombre</label>
+    <input id="nombre" type="text" placeholder="Tu nombre">
+
+    <label>Teléfono</label>
+    <input id="telefono" type="tel" placeholder="Tu número">
+
+    <label>¿Qué necesitas?</label>
+    <textarea id="pedido" placeholder="Ejemplo: recoger comida en el restaurante X y llevarla a mi casa"></textarea>
+
+    <label>Dirección de entrega</label>
+    <textarea id="direccion" placeholder="Escribe tu dirección"></textarea>
+
+    <label>Referencia</label>
+    <input id="referencia" type="text" placeholder="Ejemplo: casa azul, junto al parque">
+
+    <button onclick="calcularPedido()">
+        🧾 CALCULAR DELIVERY
+    </button>
+
+    <div id="resultado"></div>
+
+    <button onclick="enviarPedido()" id="btnEnviar" style="display:none;">
+        💬 ENVIAR PEDIDO POR WHATSAPP
+    </button>
+
+</div>
+
+<div class="card">
+
+    <h2>📦 ¿Cómo funciona?</h2>
+
+    <p style="line-height:1.7;color:#ccc;">
+        1️⃣ Escribe lo que necesitas.<br>
+        2️⃣ Comparte tu ubicación.<br>
+        3️⃣ Calculamos el delivery.<br>
+        4️⃣ Envías el pedido por WhatsApp.<br>
+        5️⃣ Valle Entregas coordina tu entrega. 🛵
+    </p>
+
+</div>
+
+</div>
+
+<footer>
+    Valle Entregas © 2026<br>
+    Yaruquí · Pifo · alrededores
+</footer>
+
+<script>
+
+let latitud = null;
+let longitud = null;
+let distancia = 0;
+let precioDelivery = 0;
+
+function obtenerUbicacion(){
+
+    const texto = document.getElementById("ubicacionTexto");
+
+    texto.innerHTML = "📡 Buscando tu ubicación...";
+
+    if(!navigator.geolocation){
+
+        texto.innerHTML =
+        '<span class="error">❌ Tu dispositivo no permite obtener ubicación.</span>';
+
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+
+        function(position){
+
+            latitud = position.coords.latitude;
+            longitud = position.coords.longitude;
+
+            texto.innerHTML =
+            '<span class="success">✅ Ubicación obtenida correctamente.</span><br>' +
+            'Latitud: ' + latitud.toFixed(6) + '<br>' +
+            'Longitud: ' + longitud.toFixed(6);
+
+        },
+
+        function(error){
+
+            let mensaje =
+            "No pudimos obtener tu ubicación.";
+
+            if(error.code === 1){
+                mensaje =
+                "❌ Permiso de ubicación rechazado. Activa el permiso de ubicación para este sitio.";
+            }
+
+            if(error.code === 2){
+                mensaje =
+                "❌ No se pudo encontrar tu ubicación.";
+            }
+
+            if(error.code === 3){
+                mensaje =
+                "❌ Se agotó el tiempo para obtener tu ubicación.";
+            }
+
+            texto.innerHTML =
+            '<span class="error">' + mensaje + '</span>';
+
+        },
+
+        {
+            enableHighAccuracy:true,
+            timeout:15000,
+            maximumAge:0
+        }
+    );
+}
+
+
+function calcularPedido(){
+
+    const nombre =
+    document.getElementById("nombre").value.trim();
+
+    const pedido =
+    document.getElementById("pedido").value.trim();
+
+    const direccion =
+    document.getElementById("direccion").value.trim();
+
+    const resultado =
+    document.getElementById("resultado");
+
+    if(!nombre || !pedido || !direccion){
+
+        resultado.innerHTML =
+        '<span class="error">⚠️ Completa nombre, pedido y dirección.</span>';
+
+        return;
+    }
+
+    /*
+       Por ahora usamos una tarifa estimada.
+       Después podemos conectar un cálculo real
+       de distancia mediante mapas.
+    */
+
+    precioDelivery = 2.00;
+
+    resultado.innerHTML =
+    `
+    <div>
+        <strong>Delivery estimado:</strong><br>
+        <span class="precio">$${precioDelivery.toFixed(2)}</span>
+        <br><br>
+        El precio final puede variar según la distancia.
+    </div>
+    `;
+
+    document.getElementById("btnEnviar").style.display = "block";
+}
+
+
+function enviarPedido(){
+
+    const nombre =
+    document.getElementById("nombre").value.trim();
+
+    const telefono =
+    document.getElementById("telefono").value.trim();
+
+    const pedido =
+    document.getElementById("pedido").value.trim();
+
+    const direccion =
+    document.getElementById("direccion").value.trim();
+
+    const referencia =
+    document.getElementById("referencia").value.trim();
+
+    let ubicacion =
+    "No compartida";
+
+    if(latitud && longitud){
+
+        ubicacion =
+        "https://www.google.com/maps?q=" +
+        latitud + "," + longitud;
+    }
+
+    const mensaje =
+`🛵 NUEVO PEDIDO - VALLE ENTREGAS
+
+👤 Nombre: ${nombre}
+
+📞 Teléfono: ${telefono || "No indicado"}
+
+📦 Pedido:
+${pedido}
+
+📍 Dirección:
+${direccion}
+
+📝 Referencia:
+${referencia || "No indicada"}
+
+📍 Ubicación GPS:
+${ubicacion}
+
+💰 Delivery estimado:
+$${precioDelivery.toFixed(2)}
+
+Por favor confirmar el pedido.`;
+
+    const numero =
+    "593982773828";
+
+    const url =
+    "https://wa.me/" +
+    numero +
+    "?text=" +
+    encodeURIComponent(mensaje);
+
+    window.open(url,"_blank");
+}
+
+</script>
+
+</body>
+</html>
