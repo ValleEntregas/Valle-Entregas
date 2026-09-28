@@ -435,64 +435,141 @@ async function guardarUbicacion() {
 
 // ===================================== MOTORIZADO: CARGAR PEDIDOS =====================================
 async function cargarPedidosMotorizado() {
-    if (!db) return;
-    const { data, error } = await db.from('pedidos').select('*').in('estado', ['disponible','aceptado','recogido']).order('fecha', {ascending:false}).limit(25);
-    
-    if (error || !data) return;
-    if (!data.length) {
-        $('ordersList').innerHTML = '<p class="muted">No hay pedidos disponibles por ahora</p>';
+    const lista = $('ordersList');
+
+    if (!db) {
+        lista.innerHTML =
+            '<p class="muted">Error: Supabase no está conectado.</p>';
         return;
     }
-    
-    if (!$('nombreMotorizado').value && localStorage.getItem('valleMotorizadoNombre')) {
-        $('nombreMotorizado').value = localStorage.getItem('valleMotorizadoNombre');
-        $('telefonoMotorizado').value = localStorage.getItem('valleMotorizadoTelefono');
-    }
-    
-    const miTel = $('telefonoMotorizado').value.trim();
-    
-    $('ordersList').innerHTML = data.map(p => {
-        const esNuevo = !idsVistos.has(String(p.id));
-        if (esNuevo) idsVistos.add(String(p.id));
-        
-        let etiqueta = {
-            disponible: '<span class="pill nuevo">🆕 DISPONIBLE</span>',
-            aceptado: '<span class="pill aceptado">🏍️ EN CAMINO</span>',
-            recogido: '<span class="pill">📦 EN ENTREGA</span>'
-        }[p.estado];
-        
-        const mio = p.motorizado_telefono === miTel;
-        
-        return `
-        <div class="order ${esNuevo && p.estado === 'disponible' ? 'nuevo' : ''}">
-            ${etiqueta}
-            <p><b>Cliente:</b> ${p.cliente_nombre} · ${p.cliente_telefono}</p>
-            <p><b>Recoger:</b> ${p.recogida_zona} → ${p.recogida_referencia}</p>
-            <p><b>Entregar:</b> ${p.entrega_zona} → ${p.entrega_referencia}</p>
-            <p><b>Detalle:</b> ${p.detalle}</p>
-            <div class="oferta-box">
-                💰 Oferta del cliente: <span class="precio-oferta">$${p.oferta.toFixed(2)}</span>
-                <small>(Mínimo: $${p.tarifa_minima.toFixed(2)})</small>
-            </div>
-            ${p.estado === 'disponible' ? `
-            <div class="actions">
-                <button onclick="aceptarPedido(${p.id}, ${p.entrega_lat}, ${p.entrega_lng})">✅ ACEPTAR ESTE PEDIDO</button>
-                <button class="secondary" onclick="verRuta(${p.recogida_lat},${p.recogida_lng})">📍 Ver recogida</button>
-            </div>` : ''}
-            ${p.estado === 'aceptado' && mio ? `
-            <div class="actions">
-                <button onclick="marcarRecogido(${p.id})">📦 PEDIDO RECOGIDO</button>
-                <button class="secondary" onclick="verRuta(${p.entrega_lat},${p.entrega_lng})">📍 Ruta entrega</button>
-            </div>` : ''}
-            ${p.estado === 'recogido' && mio ? `
-            <div class="actions">
-                <button onclick="marcarEntregado(${p.id})">✅ MARCAR ENTREGADO</button>
-            </div>` : ''}
-            ${p.estado === 'aceptado' && !mio ? `<p class="muted">Aceptado por otro motorizado</p>` : ''}
-        </div>`;
-    }).join('');
-}
 
+    lista.innerHTML =
+        '<p class="muted">Buscando pedidos...</p>';
+
+    try {
+        const { data, error } = await db
+            .from('pedidos')
+            .select('*')
+            .in('estado', ['disponible', 'aceptado', 'recogido'])
+            .order('fecha', { ascending: false })
+            .limit(25);
+
+        if (error) {
+            console.error('Error cargando pedidos:', error);
+
+            lista.innerHTML =
+                '<p class="muted">Error al cargar pedidos: ' +
+                error.message +
+                '</p>';
+
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            lista.innerHTML =
+                '<p class="muted">No hay pedidos disponibles por ahora</p>';
+            return;
+        }
+
+        if (
+            !$('nombreMotorizado').value &&
+            localStorage.getItem('valleMotorizadoNombre')
+        ) {
+            $('nombreMotorizado').value =
+                localStorage.getItem('valleMotorizadoNombre');
+
+            $('telefonoMotorizado').value =
+                localStorage.getItem('valleMotorizadoTelefono') || '';
+        }
+
+        const miTel = $('telefonoMotorizado').value.trim();
+
+        lista.innerHTML = data.map(p => {
+            const esNuevo = !idsVistos.has(String(p.id));
+
+            if (esNuevo) {
+                idsVistos.add(String(p.id));
+            }
+
+            const mio =
+                String(p.motorizado_telefono || '').trim() === miTel &&
+                miTel !== '';
+
+            const oferta = Number(p.oferta || 0).toFixed(2);
+            const minimo = Number(p.tarifa_minima || 0).toFixed(2);
+
+            const etiquetas = {
+                disponible:
+                    '<span class="pill nuevo">🆕 DISPONIBLE</span>',
+                aceptado:
+                    '<span class="pill aceptado">🏍️ EN CAMINO</span>',
+                recogido:
+                    '<span class="pill">📦 EN ENTREGA</span>'
+            };
+
+            const etiqueta = etiquetas[p.estado] || '';
+
+            return `
+            <div class="order ${esNuevo && p.estado === 'disponible' ? 'nuevo' : ''}">
+                ${etiqueta}
+
+                <p><b>Cliente:</b> ${p.cliente_nombre || ''} · ${p.cliente_telefono || ''}</p>
+
+                <p><b>Recoger:</b> ${p.recogida_zona || ''} → ${p.recogida_referencia || ''}</p>
+
+                <p><b>Entregar:</b> ${p.entrega_zona || ''} → ${p.entrega_referencia || ''}</p>
+
+                <p><b>Detalle:</b> ${p.detalle || ''}</p>
+
+                <div class="oferta-box">
+                    💰 Oferta del cliente:
+                    <span class="precio-oferta">$${oferta}</span>
+                    <small>(Mínimo: $${minimo})</small>
+                </div>
+
+                ${p.estado === 'disponible' ? `
+                <div class="actions">
+                    <button onclick="aceptarPedido(${p.id}, ${Number(p.entrega_lat) || 0}, ${Number(p.entrega_lng) || 0})">
+                        ✅ ACEPTAR ESTE PEDIDO
+                    </button>
+
+                    <button class="secondary"
+                        onclick="verRuta(${Number(p.recogida_lat) || 0},${Number(p.recogida_lng) || 0})">
+                        📍 Ver recogida
+                    </button>
+                </div>` : ''}
+
+                ${p.estado === 'aceptado' && mio ? `
+                <div class="actions">
+                    <button onclick="marcarRecogido(${p.id})">
+                        📦 PEDIDO RECOGIDO
+                    </button>
+
+                    <button class="secondary"
+                        onclick="verRuta(${Number(p.entrega_lat) || 0},${Number(p.entrega_lng) || 0})">
+                        📍 Ruta entrega
+                    </button>
+                </div>` : ''}
+
+                ${p.estado === 'recogido' && mio ? `
+                <div class="actions">
+                    <button onclick="marcarEntregado(${p.id})">
+                        ✅ MARCAR ENTREGADO
+                    </button>
+                </div>` : ''}
+
+                ${p.estado === 'aceptado' && !mio ?
+                    '<p class="muted">Aceptado por otro motorizado</p>' : ''}
+            </div>`;
+        }).join('');
+
+    } catch (error) {
+        console.error('Error inesperado:', error);
+
+        lista.innerHTML =
+            '<p class="muted">Error: ' + error.message + '</p>';
+    }
+}
 // ===================================== TUS 3 FUNCIONES =====================================
 
 async function aceptarPedido(id, lat, lng) {
