@@ -560,7 +560,8 @@ function mostrarEstadoPedido(data) {
     }
 
     window.ultimoEstadoPedido = data.estado;
-}// ===================================== MOTORIZADO: DISPONIBILIDAD =====================================
+}
+    // ===================================== MOTORIZADO: DISPONIBILIDAD =====================================
 function setDisponible(si) {
     estaDisponible = si;
     $('statusDot').className = `status-dot ${si ? 'online' : 'offline'}`;
