@@ -609,9 +609,11 @@ async function cargarPedidosMotorizado() {
 
                 ${p.estado === 'disponible' ? `
                 <div class="actions">
-                    <button onclick="aceptarPedido(${p.id}, ${Number(p.entrega_lat) || 0}, ${Number(p.entrega_lng) || 0})">
-                        ✅ ACEPTAR ESTE PEDIDO
-                    </button>
+                    <button
+    type="button"
+    onclick="window.aceptarPedido(${Number(p.id)}, ${Number(p.entrega_lat) || 0}, ${Number(p.entrega_lng) || 0}); return false;">
+    ✅ ACEPTAR ESTE PEDIDO
+</button>
 
                     <button class="secondary"
                         onclick="verRuta(${Number(p.recogida_lat) || 0},${Number(p.recogida_lng) || 0})">
