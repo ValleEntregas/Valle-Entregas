@@ -623,7 +623,7 @@ async function cargarPedidosMotorizado() {
 
                 ${p.estado === 'aceptado' && mio ? `
                 <div class="actions">
-                    <button onclick="marcarRecogido(${p.id})">
+                    <button onclick="marcarRecogido(${JSON.stringify(p.id)})">
                         📦 PEDIDO RECOGIDO
                     </button>
 
@@ -635,7 +635,7 @@ async function cargarPedidosMotorizado() {
 
                 ${p.estado === 'recogido' && mio ? `
                 <div class="actions">
-                    <button onclick="marcarEntregado(${p.id})">
+                    <button onclick="marcarEntregado(${JSON.stringify(p.id)})">
                         ✅ MARCAR ENTREGADO
                     </button>
                 </div>` : ''}
