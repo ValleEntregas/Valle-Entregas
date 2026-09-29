@@ -366,8 +366,8 @@ $('orderForm').addEventListener('submit', async e => {
             minTarifa.toFixed(2).replace('.', ',');
 
         return alert(
-            Debes ingresar una oferta de al menos $${minTarifa.toFixed(2)}
-        );
+    `Debes ingresar una oferta de al menos $${minTarifa.toFixed(2)}`
+);
     }
 
     if (oferta < minTarifa) {
