@@ -807,6 +807,140 @@ window.aceptarPedido = async function(id, lat, lng) {
         );
     }
 };
+    window.marcarRecogido = async function(id) {
+
+    alert("🔵 BOTÓN RECOGIDO FUNCIONA\nID: " + id);
+
+    if (!db) {
+        alert("❌ Base de datos no disponible.");
+        return;
+    }
+
+    const tel = $("telefonoMotorizado").value.trim();
+
+    if (!tel) {
+        alert("⚠️ Escribe tu WhatsApp primero.");
+        return;
+    }
+
+    const confirmar = confirm("¿Ya recogiste el pedido?");
+
+    if (!confirmar) return;
+
+    alert("🟡 MARCANDO PEDIDO COMO RECOGIDO...");
+
+    try {
+
+        const { data, error } = await db.rpc(
+            "marcar_pedido_recogido",
+            {
+                p_id: String(id),
+                p_telefono: tel
+            }
+        );
+
+        console.log("RECOGIDO DATA:", data);
+        console.log("RECOGIDO ERROR:", error);
+
+        if (error) {
+            alert(
+                "🔴 ERROR SUPABASE:\n\n" +
+                error.message
+            );
+            return;
+        }
+
+        if (data !== true) {
+            alert(
+                "⚠️ NO SE PUDO MARCAR COMO RECOGIDO.\n\n" +
+                "El pedido debe estar aceptado y asignado a tu WhatsApp."
+            );
+            return;
+        }
+
+        alert("📦 ¡PEDIDO MARCADO COMO RECOGIDO!");
+
+        await cargarPedidosMotorizado();
+
+    } catch (error) {
+
+        console.error("ERROR COMPLETO:", error);
+
+        alert(
+            "🔴 ERROR:\n\n" +
+            error.message
+        );
+    }
+};
+
+
+/* ⬇️ AQUÍ EMPIEZA LA NUEVA FUNCIÓN */
+
+window.marcarEntregado = async function(id) {
+
+    alert("🔵 BOTÓN ENTREGADO FUNCIONA\nID: " + id);
+
+    if (!db) {
+        alert("❌ Base de datos no disponible.");
+        return;
+    }
+
+    const tel = $("telefonoMotorizado").value.trim();
+
+    if (!tel) {
+        alert("⚠️ Escribe tu WhatsApp primero.");
+        return;
+    }
+
+    const confirmar = confirm("¿Ya entregaste el pedido al cliente?");
+
+    if (!confirmar) return;
+
+    alert("🟡 MARCANDO PEDIDO COMO ENTREGADO...");
+
+    try {
+
+        const { data, error } = await db.rpc(
+            "marcar_pedido_entregado",
+            {
+                p_id: String(id),
+                p_telefono: tel
+            }
+        );
+
+        console.log("ENTREGADO DATA:", data);
+        console.log("ENTREGADO ERROR:", error);
+
+        if (error) {
+            alert(
+                "🔴 ERROR SUPABASE:\n\n" +
+                error.message
+            );
+            return;
+        }
+
+        if (data !== true) {
+            alert(
+                "⚠️ NO SE PUDO MARCAR COMO ENTREGADO.\n\n" +
+                "El pedido debe estar recogido y asignado a tu WhatsApp."
+            );
+            return;
+        }
+
+        alert("🟢 ¡PEDIDO MARCADO COMO ENTREGADO!");
+
+        await cargarPedidosMotorizado();
+
+    } catch (error) {
+
+        console.error("ERROR COMPLETO:", error);
+
+        alert(
+            "🔴 ERROR:\n\n" +
+            error.message
+        );
+    }
+};
 // ===================================== RUTA Y ALERTAS =====================================
 function verRuta(lat, lng) {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
