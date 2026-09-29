@@ -301,8 +301,7 @@ function calcularTarifa() {
     const minima = Math.round((base + extraDist) * 100) / 100;
 
     $('fareBox').textContent =
-        Tarifa mínima: $${minima.toFixed(2)}${km ? ` · ${km.toFixed(1)} km : ''}`;
-
+    `Tarifa mínima: $${minima.toFixed(2)}${km ? ` · ${km.toFixed(1)} km` : ''}`;
     return minima;
 }
 
