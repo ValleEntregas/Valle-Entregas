@@ -686,10 +686,10 @@ async function aceptarPedido(id, lat, lng) {
     });
 
     if (error) {
-      console.error(error);
-      alert("❌ No se pudo aceptar el pedido.");
-      return;
-    }
+  console.error("ERROR AL ACEPTAR:", error);
+  alert("❌ Error al aceptar:\n\n" + error.message);
+  return;
+}
 
     if (!data || data.length === 0) {
       alert(
