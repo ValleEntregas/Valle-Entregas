@@ -687,7 +687,7 @@ window.aceptarPedido = async function(id, lat, lng) {
     try {
 
         const { data, error } = await db.rpc("aceptar_pedido", {
-            p_id: Number(id),
+           p_id: String(id),
             p_nombre: nombre,
             p_telefono: tel
         });
