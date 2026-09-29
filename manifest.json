@@ -1,0 +1,12 @@
+
+{
+  "name": "Valle Entregas",
+  "short_name": "Valle Entregas",
+  "description": "De todo, hasta tu puerta.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#D4AF37",
+  "orientation": "portrait"
+}
