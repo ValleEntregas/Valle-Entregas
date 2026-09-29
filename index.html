@@ -292,71 +292,169 @@ function calcularDistanciaKm() {
 
 function calcularTarifa() {
     const km = calcularDistanciaKm();
-    const zona1 = $('zonaRecogida').value, zona2 = $('zonaEntrega').value;
+    const zona1 = $('zonaRecogida').value;
+    const zona2 = $('zonaEntrega').value;
+
     const base = zona1 === zona2 ? 2.5 : 3.5;
     const extraDist = km ? Math.max(0, km - 3) * 0.45 : 0;
+
     const minima = Math.round((base + extraDist) * 100) / 100;
-    $('fareBox').textContent = `Tarifa mínima: $${minima.toFixed(2)} ${km ? `· ${km.toFixed(1)} km` : ''}`;
+
+    $('fareBox').textContent =
+        Tarifa mínima: $${minima.toFixed(2)}${km ? ` · ${km.toFixed(1)} km : ''}`;
+
     return minima;
 }
 
+
 function monto(valor) {
-    if (!valor) return NaN;
-    let t = String(valor).trim().replace(/\$/g,'').replace(/\./g, m => valor.includes(',') ? '' : '.');
-    return Number(t.replace(',', '.'));
+    if (valor == null || String(valor).trim() === '') {
+        return NaN;
+    }
+
+    let t = String(valor)
+        .trim()
+        .replace(/\$/g, '')
+        .replace(/\s/g, '');
+
+    // Permite formatos como:
+    // 4,50
+    // 4.50
+    // $4,50
+    // $4.50
+    if (t.includes(',')) {
+        t = t.replace(/\./g, '').replace(',', '.');
+    }
+
+    const numero = Number(t);
+
+    return Number.isFinite(numero) ? numero : NaN;
 }
 
+
 $('ofertaTarifa')?.addEventListener('blur', () => {
+
     const min = calcularTarifa();
     const val = monto($('ofertaTarifa').value);
-    if (isNaN(val) || val < min) $('ofertaTarifa').value = min.toFixed(2).replace('.', ',');
+
+    if (!Number.isFinite(val) || val < min) {
+        $('ofertaTarifa').value =
+            min.toFixed(2).replace('.', ',');
+    }
 });
 
-['zonaRecogida','zonaEntrega'].forEach(id => $(id)?.addEventListener('change', calcularTarifa));
 
-// ===================================== ENVIAR PEDIDO =====================================
+['zonaRecogida', 'zonaEntrega'].forEach(id => {
+    $(id)?.addEventListener('change', calcularTarifa);
+});
+
+
+// =====================================
+// ENVIAR PEDIDO
+// =====================================
+
 $('orderForm').addEventListener('submit', async e => {
+
     e.preventDefault();
-    if (!db) return alert('Base de datos sin conexión');
-    
+
+    if (!db) {
+        return alert('Base de datos sin conexión');
+    }
+
     const nombre = $('nombre').value.trim();
     const tel = $('telefono').value.trim();
     const refRecog = $('refRecogida').value.trim();
     const refEntr = $('refEntrega').value.trim();
-    const oferta = monto($('ofertaTarifa').value);
+
+    if (!pickup || !dropoff) {
+        return alert('Marca ambos puntos en los mapas');
+    }
+
     const minTarifa = calcularTarifa();
-    
-    if (!pickup || !dropoff) return alert('Marca ambos puntos en los mapas');
-    if (oferta < minTarifa) return alert(`Oferta mínima: $${minTarifa.toFixed(2)}`);
-    
+    const oferta = monto($('ofertaTarifa').value);
+
+    // OBLIGAR A UNA OFERTA VÁLIDA
+    if (!Number.isFinite(oferta)) {
+        $('ofertaTarifa').value =
+            minTarifa.toFixed(2).replace('.', ',');
+
+        return alert(
+            Debes ingresar una oferta de al menos $${minTarifa.toFixed(2)}
+        );
+    }
+
+    // NO PERMITIR MENOS DEL MÍNIMO
+    if (oferta < minTarifa) {
+        $('ofertaTarifa').value =
+            minTarifa.toFixed(2).replace('.', ',');
+
+        return alert(
+            La oferta mínima es $${minTarifa.toFixed(2)}
+        );
+    }
+
+    const distancia = calcularDistanciaKm() || 0;
+
     const pedido = {
         cliente_nombre: nombre,
         cliente_telefono: tel,
+
         recogida_zona: $('zonaRecogida').value,
         recogida_referencia: refRecog,
         recogida_lat: pickup.lat,
         recogida_lng: pickup.lng,
+
         entrega_zona: $('zonaEntrega').value,
         entrega_referencia: refEntr,
         entrega_lat: dropoff.lat,
         entrega_lng: dropoff.lng,
+
         detalle: $('detalle').value.trim() || 'Sin detalle',
-        distancia_km: calcularDistanciaKm() || 0,
+
+        distancia_km: distancia,
         tarifa_minima: minTarifa,
         oferta: oferta,
+
         estado: 'disponible'
     };
-    
-    $('submitOrder').disabled = true;
-    const { data, error } = await db.from('pedidos').insert(pedido).select('id').single();
-    $('submitOrder').disabled = false;
-    
-    if (error) return alert('Error: ' + error.message);
-    
-    $('clientMsg').innerHTML = `<p class="notice success">✅ Pedido #${data.id} enviado. Esperando motorizado...</p>`;
-    $('trackId').value = data.id;
-});
 
+    $('submitOrder').disabled = true;
+
+    try {
+
+        const { data, error } = await db
+            .from('pedidos')
+            .insert(pedido)
+            .select('id')
+            .single();
+
+        if (error) {
+            console.error(error);
+            return alert('Error: ' + error.message);
+        }
+
+        $('clientMsg').innerHTML =
+            `<p class="notice success">
+                ✅ Pedido #${data.id} enviado.
+                Esperando motorizado...
+            </p>`;
+
+        $('trackId').value = data.id;
+
+        $('ofertaTarifa').value =
+            oferta.toFixed(2).replace('.', ',');
+
+    } catch (error) {
+
+        console.error(error);
+        alert('Error al enviar el pedido: ' + error.message);
+
+    } finally {
+
+        $('submitOrder').disabled = false;
+
+    }
+});
 // ===================================== RASTREO =====================================
 async function trackOrder() {
     const id = $('trackId').value.trim();
