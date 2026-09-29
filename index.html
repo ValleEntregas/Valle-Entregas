@@ -1060,6 +1060,8 @@ function verRuta(lat, lng) {
 }
 
 function toggleAlertas() {
+
+    activarNotificacionesPush();
     alertasActivas = !alertasActivas;
     $('alertaBtn').textContent = alertasActivas ? '🔕 DESACTIVAR' : '🔔 ACTIVAR ALERTAS';
     $('alertStatus').textContent = alertasActivas ? '✅ Revisando pedidos...' : 'Alertas desactivadas';
