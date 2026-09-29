@@ -653,66 +653,89 @@ async function cargarPedidosMotorizado() {
 // ===================================== TUS 3 FUNCIONES =====================================
 
 async function aceptarPedido(id, lat, lng) {
-  if (!db) {
-    alert("❌ Base de datos no disponible.");
-    return;
-  }
 
-  const nombre = $("nombreMotorizado").value.trim();
-  const tel = $("telefonoMotorizado").value.trim();
+    alert("🔵 BOTÓN ACEPTAR FUNCIONA\nPedido ID: " + id);
 
-  if (!nombre || !tel) {
-    alert("⚠️ Escribe tu nombre y WhatsApp primero.");
-    return;
-  }
-
-  if (!estaDisponible) {
-    alert("⚠️ Primero debes estar DISPONIBLE.");
-    return;
-  }
-
-  const confirmar = confirm(
-    "¿Quieres aceptar este pedido?\n\n" +
-    "Al aceptarlo quedará asignado a ti."
-  );
-
-  if (!confirmar) return;
-
-  try {
-    const { data, error } = await db.rpc("aceptar_pedido", {
-      p_id: id,
-      p_nombre: nombre,
-      p_telefono: tel
-    });
-
-    if (error) {
-  console.error("ERROR AL ACEPTAR:", error);
-  alert("❌ Error al aceptar:\n\n" + error.message);
-  return;
-}
-
-    if (!data || data.length === 0) {
-      alert(
-        "⚠️ Este pedido ya fue aceptado por otro motorizado."
-      );
-
-      await cargarPedidosMotorizado();
-      return;
+    if (!db) {
+        alert("❌ Base de datos no disponible.");
+        return;
     }
 
-    localStorage.setItem("valleMotorizadoNombre", nombre);
-    localStorage.setItem("valleMotorizadoTelefono", tel);
+    const nombre = $("nombreMotorizado").value.trim();
+    const tel = $("telefonoMotorizado").value.trim();
 
-    alert("✅ ¡Pedido aceptado!");
+    if (!nombre || !tel) {
+        alert("⚠️ Escribe tu nombre y WhatsApp primero.");
+        return;
+    }
 
-    await cargarPedidosMotorizado();
+    if (!estaDisponible) {
+        alert("⚠️ Primero debes estar DISPONIBLE.");
+        return;
+    }
 
-  } catch (error) {
-    console.error(error);
-    alert("❌ Ocurrió un error al aceptar el pedido.");
-  }
+    const confirmar = confirm(
+        "¿Quieres aceptar este pedido?\n\n" +
+        "Al aceptarlo quedará asignado a ti."
+    );
+
+    if (!confirmar) return;
+
+    alert("🟡 CONECTANDO CON SUPABASE...");
+
+    try {
+
+        const { data, error } = await db.rpc("aceptar_pedido", {
+            p_id: Number(id),
+            p_nombre: nombre,
+            p_telefono: tel
+        });
+
+        console.log("RESPUESTA:", data);
+        console.log("ERROR:", error);
+
+        if (error) {
+            alert(
+                "🔴 SUPABASE DIO ERROR:\n\n" +
+                error.message
+            );
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            alert(
+                "⚠️ SUPABASE RESPONDIÓ PERO NO ACEPTÓ EL PEDIDO.\n\n" +
+                "El pedido posiblemente ya no está disponible."
+            );
+
+            await cargarPedidosMotorizado();
+            return;
+        }
+
+        localStorage.setItem(
+            "valleMotorizadoNombre",
+            nombre
+        );
+
+        localStorage.setItem(
+            "valleMotorizadoTelefono",
+            tel
+        );
+
+        alert("🟢 ¡PEDIDO ACEPTADO CORRECTAMENTE!");
+
+        await cargarPedidosMotorizado();
+
+    } catch (error) {
+
+        console.error("ERROR COMPLETO:", error);
+
+        alert(
+            "🔴 ERROR:\n\n" +
+            error.message
+        );
+    }
 }
-
 async function marcarRecogido(id) {
   if (!db) {
     alert("❌ Base de datos no disponible.");
