@@ -306,7 +306,6 @@ function calcularTarifa() {
     return minima;
 }
 
-
 function monto(valor) {
     if (valor == null || String(valor).trim() === '') {
         return NaN;
@@ -317,11 +316,6 @@ function monto(valor) {
         .replace(/\$/g, '')
         .replace(/\s/g, '');
 
-    // Permite formatos como:
-    // 4,50
-    // 4.50
-    // $4,50
-    // $4.50
     if (t.includes(',')) {
         t = t.replace(/\./g, '').replace(',', '.');
     }
@@ -331,9 +325,7 @@ function monto(valor) {
     return Number.isFinite(numero) ? numero : NaN;
 }
 
-
 $('ofertaTarifa')?.addEventListener('blur', () => {
-
     const min = calcularTarifa();
     const val = monto($('ofertaTarifa').value);
 
@@ -343,18 +335,15 @@ $('ofertaTarifa')?.addEventListener('blur', () => {
     }
 });
 
-
 ['zonaRecogida', 'zonaEntrega'].forEach(id => {
     $(id)?.addEventListener('change', calcularTarifa);
 });
-
 
 // =====================================
 // ENVIAR PEDIDO
 // =====================================
 
 $('orderForm').addEventListener('submit', async e => {
-
     e.preventDefault();
 
     if (!db) {
@@ -373,7 +362,6 @@ $('orderForm').addEventListener('submit', async e => {
     const minTarifa = calcularTarifa();
     const oferta = monto($('ofertaTarifa').value);
 
-    // OBLIGAR A UNA OFERTA VÁLIDA
     if (!Number.isFinite(oferta)) {
         $('ofertaTarifa').value =
             minTarifa.toFixed(2).replace('.', ',');
@@ -383,7 +371,6 @@ $('orderForm').addEventListener('submit', async e => {
         );
     }
 
-    // NO PERMITIR MENOS DEL MÍNIMO
     if (oferta < minTarifa) {
         $('ofertaTarifa').value =
             minTarifa.toFixed(2).replace('.', ',');
@@ -421,7 +408,6 @@ $('orderForm').addEventListener('submit', async e => {
     $('submitOrder').disabled = true;
 
     try {
-
         const { data, error } = await db
             .from('pedidos')
             .insert(pedido)
@@ -445,14 +431,11 @@ $('orderForm').addEventListener('submit', async e => {
             oferta.toFixed(2).replace('.', ',');
 
     } catch (error) {
-
         console.error(error);
         alert('Error al enviar el pedido: ' + error.message);
 
     } finally {
-
         $('submitOrder').disabled = false;
-
     }
 });
 // ===================================== RASTREO =====================================
