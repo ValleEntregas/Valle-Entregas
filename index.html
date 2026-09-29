@@ -374,9 +374,9 @@ $('orderForm').addEventListener('submit', async e => {
         $('ofertaTarifa').value =
             minTarifa.toFixed(2).replace('.', ',');
 
-        return alert(
-            La oferta mínima es $${minTarifa.toFixed(2)}
-        );
+return alert(
+    `La oferta mínima es $${minTarifa.toFixed(2)}`
+);
     }
 
     const distancia = calcularDistanciaKm() || 0;
