@@ -1120,18 +1120,144 @@ if ('serviceWorker' in navigator) {
         }
     });
 }
+```html id="x9g7kw"
 </script>
+
 <script>
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', async () => {
-        try {
-            await navigator.serviceWorker.register('./service-worker.js');
-            console.log('Valle Entregas preparada');
-        } catch (error) {
-            console.error(error);
-        }
-    });
+// =====================================
+// 🔔 VALLE ENTREGAS - NOTIFICACIONES PUSH
+// =====================================
+
+const VAPID_PUBLIC_KEY =
+"BFj0M-AKZ9rEKqzPDazep5G_ThnO9ED9WnFV4v-o8DJ4xWMBoUnu2iulp5ZhKUkBXfsT9MhNvB2vgyGFmG8oI0o";
+
+function convertirClaveVapid(base64String) {
+
+    const padding =
+        '='.repeat((4 - base64String.length % 4) % 4);
+
+    const base64 =
+        (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = atob(base64);
+
+    return Uint8Array.from(
+        [...rawData].map(char => char.charCodeAt(0))
+    );
 }
+
+
+// REGISTRAR SERVICE WORKER
+if ('serviceWorker' in navigator) {
+
+    window.addEventListener('load', async () => {
+
+        try {
+
+            await navigator.serviceWorker.register(
+                './service-worker.js'
+            );
+
+            console.log(
+                '✅ Valle Entregas: Service Worker registrado'
+            );
+
+        } catch (error) {
+
+            console.error(
+                '❌ Error registrando Service Worker:',
+                error
+            );
+
+        }
+
+    });
+
+}
+
+
+// ACTIVAR NOTIFICACIONES
+async function activarNotificacionesPush() {
+
+    if (!('serviceWorker' in navigator)) {
+
+        alert(
+            '❌ Este dispositivo no admite notificaciones.'
+        );
+
+        return null;
+    }
+
+    if (!('PushManager' in window)) {
+
+        alert(
+            '❌ Este navegador no admite notificaciones push.'
+        );
+
+        return null;
+    }
+
+    try {
+
+        const permiso =
+            await Notification.requestPermission();
+
+        if (permiso !== 'granted') {
+
+            alert(
+                '⚠️ Debes permitir las notificaciones.'
+            );
+
+            return null;
+        }
+
+        const registro =
+            await navigator.serviceWorker.ready;
+
+        let suscripcion =
+            await registro.pushManager.getSubscription();
+
+        if (!suscripcion) {
+
+            suscripcion =
+                await registro.pushManager.subscribe({
+
+                    userVisibleOnly: true,
+
+                    applicationServerKey:
+                        convertirClaveVapid(
+                            VAPID_PUBLIC_KEY
+                        )
+
+                });
+        }
+
+        console.log(
+            '✅ NOTIFICACIONES ACTIVADAS:',
+            JSON.stringify(suscripcion)
+        );
+
+        return suscripcion;
+
+    } catch (error) {
+
+        console.error(
+            '❌ ERROR ACTIVANDO NOTIFICACIONES:',
+            error
+        );
+
+        alert(
+            '❌ No se pudieron activar las notificaciones.\n\n' +
+            error.message
+        );
+
+        return null;
+    }
+}
+
 </script>
+
 </body>
 </html>
