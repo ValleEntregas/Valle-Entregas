@@ -654,8 +654,7 @@ async function cargarPedidosMotorizado() {
 }
 // ===================================== TUS 3 FUNCIONES =====================================
 
-async function aceptarPedido(id, lat, lng) {
-
+window.aceptarPedido = async function(id, lat, lng) {
     alert("🔵 BOTÓN ACEPTAR FUNCIONA\nPedido ID: " + id);
 
     if (!db) {
