@@ -440,25 +440,78 @@ return alert(
 // ===================================== RASTREO =====================================
 async function trackOrder() {
     const id = $('trackId').value.trim();
+
     if (!id || !db) return;
-    const { data } = await db.from('pedidos').select('*').eq('id', id).single();
-    if (!data) return $('trackResult').textContent = 'No encontrado';
-    
+
+    const { data, error } = await db
+        .from('pedidos')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+    if (error || !data) {
+        $('trackResult').textContent = 'No encontrado';
+        return;
+    }
+
+    mostrarEstadoPedido(data);
+
+    // Actualización automática del estado
+    if (window.canalRastreo) {
+        window.canalRastreo.unsubscribe();
+    }
+
+    window.canalRastreo = db
+        .channel('rastreo-' + id)
+        .on(
+            'postgres_changes',
+            {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'pedidos',
+                filter: 'id=eq.' + id
+            },
+            payload => {
+                console.log('🔄 ESTADO ACTUALIZADO:', payload.new);
+                mostrarEstadoPedido(payload.new);
+            }
+        )
+        .subscribe();
+}
+
+
+function mostrarEstadoPedido(data) {
+
     const estadoTexto = {
         disponible: '⏳ Disponible — esperando motorizado',
         aceptado: '🏍️ Aceptado por ' + (data.motorizado_nombre || 'motorizado'),
         recogido: '📦 En camino a entrega',
         entregado: '✅ Entregado'
     }[data.estado] || data.estado;
-    
+
     $('trackResult').innerHTML = `
         <div class="order">
             <p><b>Estado:</b> ${estadoTexto}</p>
-            <p><b>Oferta:</b> $${data.oferta.toFixed(2)}</p>
-            ${data.motorizado_nombre ? `<p><b>Motorizado:</b> ${data.motorizado_nombre} · ${data.motorizado_telefono || ''}</p>` : ''}
-        </div>`;
-}
 
+            <p>
+                <b>Oferta:</b>
+                $${Number(data.oferta || 0).toFixed(2)}
+            </p>
+
+            ${
+                data.motorizado_nombre
+                ? `
+                <p>
+                    <b>Motorizado:</b>
+                    ${data.motorizado_nombre}
+                    · ${data.motorizado_telefono || ''}
+                </p>
+                `
+                : ''
+            }
+        </div>
+    `;
+}
 // ===================================== MOTORIZADO: DISPONIBILIDAD =====================================
 function setDisponible(si) {
     estaDisponible = si;
