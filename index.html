@@ -1235,11 +1235,52 @@ async function activarNotificacionesPush() {
         }
 
         console.log(
-            '✅ NOTIFICACIONES ACTIVADAS:',
-            JSON.stringify(suscripcion)
-        );
+    '✅ NOTIFICACIONES ACTIVADAS:',
+    JSON.stringify(suscripcion)
+);
 
-        return suscripcion;
+// Guardar suscripción en Supabase
+try {
+
+    const telefono =
+        document.getElementById('telefonoMotorizado')?.value ||
+        document.getElementById('clienteTelefono')?.value ||
+        '';
+
+    const rol =
+        document.getElementById('telefonoMotorizado')
+            ? 'motorizado'
+            : 'cliente';
+
+    const { error } = await supabaseClient
+        .from('push_subscriptions')
+        .insert({
+            telefono: telefono,
+            rol: rol,
+            subscription: suscripcion.toJSON()
+        });
+
+    if (error) {
+        console.error(
+            '❌ Error guardando suscripción:',
+            error
+        );
+    } else {
+        console.log(
+            '✅ Suscripción guardada en Supabase'
+        );
+    }
+
+} catch (error) {
+
+    console.error(
+        '❌ Error guardando suscripción:',
+        error
+    );
+
+}
+
+return suscripcion;
 
     } catch (error) {
 
