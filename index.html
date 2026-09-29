@@ -1121,5 +1121,17 @@ if ('serviceWorker' in navigator) {
     });
 }
 </script>
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+        try {
+            await navigator.serviceWorker.register('./service-worker.js');
+            console.log('Valle Entregas preparada');
+        } catch (error) {
+            console.error(error);
+        }
+    });
+}
+</script>
 </body>
 </html>
