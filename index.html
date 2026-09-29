@@ -621,17 +621,21 @@ async function cargarPedidosMotorizado() {
                     </button>
                 </div>` : ''}
 
-                ${p.estado === 'aceptado' && mio ? `
-                <div class="actions">
-                    <button onclick="marcarRecogido(${JSON.stringify(p.id)})">
-                        📦 PEDIDO RECOGIDO
-                    </button>
+               ${p.estado === 'aceptado' && mio ? `
+<div class="actions">
+    <button
+        type="button"
+        onclick="window.marcarRecogido('${String(p.id)}'); return false;">
+        📦 PEDIDO RECOGIDO
+    </button>
 
-                    <button class="secondary"
-                        onclick="verRuta(${Number(p.entrega_lat) || 0},${Number(p.entrega_lng) || 0})">
-                        📍 Ruta entrega
-                    </button>
-                </div>` : ''}
+    <button
+        type="button"
+        class="secondary"
+        onclick="verRuta(${Number(p.entrega_lat) || 0},${Number(p.entrega_lng) || 0}); return false;">
+        📍 Ruta entrega
+    </button>
+</div>` : ''}
 
                 ${p.estado === 'recogido' && mio ? `
                 <div class="actions">
