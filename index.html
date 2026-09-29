@@ -511,6 +511,24 @@ function mostrarEstadoPedido(data) {
             }
         </div>
     `;
+
+    // 🔔 NOTIFICACIÓN CUANDO EL PEDIDO ES ACEPTADO
+    if (data.estado === 'aceptado') {
+
+        if (window.ultimoEstadoPedido !== 'aceptado') {
+
+            window.ultimoEstadoPedido = 'aceptado';
+
+            alert(
+                '🏍️ ¡TU PEDIDO FUE ACEPTADO!\\n\\n' +
+                'Motorizado: ' +
+                (data.motorizado_nombre || 'Motorizado') +
+                '\\n\\n' +
+                '📱 WhatsApp: ' +
+                (data.motorizado_telefono || 'No disponible')
+            );
+        }
+    }
 }
 // ===================================== MOTORIZADO: DISPONIBILIDAD =====================================
 function setDisponible(si) {
