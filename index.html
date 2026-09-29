@@ -638,12 +638,15 @@ async function cargarPedidosMotorizado() {
     </button>
 </div>` : ''}
 
-                ${p.estado === 'recogido' && mio ? `
-                <div class="actions">
-                    <button onclick="marcarEntregado(${JSON.stringify(p.id)})">
-                        ✅ MARCAR ENTREGADO
-                    </button>
-                </div>` : ''}
+              ${p.estado === 'recogido' && mio ? `
+<div class="actions" style="position:relative;z-index:99999;">
+    <button
+        type="button"
+        style="position:relative;z-index:100000;pointer-events:auto;cursor:pointer;"
+        onpointerdown="event.preventDefault(); event.stopPropagation(); window.marcarEntregado('${String(p.id)}');">
+        ✅ MARCAR ENTREGADO
+    </button>
+</div>` : ''}
 
                 ${p.estado === 'aceptado' && !mio ?
                     '<p class="muted">Aceptado por otro motorizado</p>' : ''}
