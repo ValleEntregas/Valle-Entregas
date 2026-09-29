@@ -512,25 +512,55 @@ function mostrarEstadoPedido(data) {
         </div>
     `;
 
-    // 🔔 NOTIFICACIÓN CUANDO EL PEDIDO ES ACEPTADO
-    if (data.estado === 'aceptado') {
-
-        if (window.ultimoEstadoPedido !== 'aceptado') {
-
-            window.ultimoEstadoPedido = 'aceptado';
-
-            alert(
-                '🏍️ ¡TU PEDIDO FUE ACEPTADO!\\n\\n' +
-                'Motorizado: ' +
-                (data.motorizado_nombre || 'Motorizado') +
-                '\\n\\n' +
-                '📱 WhatsApp: ' +
-                (data.motorizado_telefono || 'No disponible')
-            );
-        }
+    // 🔔 CONTROL DE NOTIFICACIONES
+    if (!window.ultimoEstadoPedido) {
+        window.ultimoEstadoPedido = data.estado;
+        return;
     }
-}
-// ===================================== MOTORIZADO: DISPONIBILIDAD =====================================
+
+    // 🏍️ PEDIDO ACEPTADO
+    if (
+        data.estado === 'aceptado' &&
+        window.ultimoEstadoPedido !== 'aceptado'
+    ) {
+
+        alert(
+            '🏍️ ¡TU PEDIDO FUE ACEPTADO!\\n\\n' +
+            'Motorizado: ' +
+            (data.motorizado_nombre || 'Motorizado') +
+            '\\n\\n📱 WhatsApp: ' +
+            (data.motorizado_telefono || 'No disponible')
+        );
+    }
+
+    // 📦 PEDIDO RECOGIDO
+    if (
+        data.estado === 'recogido' &&
+        window.ultimoEstadoPedido !== 'recogido'
+    ) {
+
+        alert(
+            '📦 ¡TU PEDIDO FUE RECOGIDO!\\n\\n' +
+            'El motorizado ya tiene tu pedido.\\n\\n' +
+            '🛵 Va en camino hacia el lugar de entrega.'
+        );
+    }
+
+    // ✅ PEDIDO ENTREGADO
+    if (
+        data.estado === 'entregado' &&
+        window.ultimoEstadoPedido !== 'entregado'
+    ) {
+
+        alert(
+            '✅ ¡PEDIDO ENTREGADO!\\n\\n' +
+            'Tu pedido fue entregado correctamente.\\n\\n' +
+            '¡Gracias por usar Valle Entregas! 🛵'
+        );
+    }
+
+    window.ultimoEstadoPedido = data.estado;
+}// ===================================== MOTORIZADO: DISPONIBILIDAD =====================================
 function setDisponible(si) {
     estaDisponible = si;
     $('statusDot').className = `status-dot ${si ? 'online' : 'offline'}`;
