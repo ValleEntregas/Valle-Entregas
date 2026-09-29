@@ -741,11 +741,11 @@ async function marcarRecogido(id) {
       }
     );
 
-    if (error) {
-      console.error(error);
-      alert("❌ No se pudo actualizar el pedido.");
-      return;
-    }
+if (error) {
+  console.error("ERROR AL ACEPTAR:", error);
+  alert("❌ Error al aceptar:\n\n" + error.message);
+  return;
+}
 
     if (!data) {
       alert(
