@@ -1,1306 +1,1174 @@
-<!doctype html>
-<html lang="es">
-<head>
-    <link rel="manifest" href="./manifest.json">
+import 'dart:async';
+import 'dart:math';
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:audioplayers/audioplayers.dart';
 
-<meta name="theme-color" content="#D4AF37">
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Valle Entregas | De todo, hasta tu puerta</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="manifest" href="manifest.webmanifest">
-    <meta name="theme-color" content="#f2c94c">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Valle Entregas">
-    <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/d/1cIaAAliaMiiCfHTzGE0m3fTqj3URSwn0">
-    
-    <style>
-        :root{--gold:#f2c94c;--gold2:#d4a82f;--green:#2d503c;--bg:#090b09;--panel:#141814;--line:#343a32;--text:#f5f5ef;--muted:#b8bdb4;--red:#ff7777;--ok:#4ade80;--warn:#facc15}
-        *{box-sizing:border-box}
-        body{margin:0;background:var(--bg);color:var(--text);font:16px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-        header{background:linear-gradient(135deg,#050605,#1b281e);border-bottom:2px solid var(--gold);padding:14px;text-align:center}
-        .brand{font-size:clamp(22px,5vw,34px);font-weight:900;color:var(--gold);letter-spacing:1px}
-        .brand-logo{display:block;width:min(100%,320px);max-height:180px;object-fit:contain;margin:0 auto 6px}
-        .tag{color:#eee;font-size:13px;margin-top:2px}
-        nav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:10px;background:#101310;position:sticky;top:0;z-index:1000}
-        button,.btn{background:var(--gold);color:#15150f;border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-block;font-size:15px}
-        button.secondary,.btn.secondary{background:#27372b;color:#fff;border:1px solid var(--gold)}
-        button.danger{background:#7d2929;color:white}
-        button:disabled{opacity:.5;cursor:not-allowed}
-        main{max-width:960px;margin:14px auto;padding:0 12px 30px}
-        .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 6px 20px #0005}
-        h1,h2,h3{color:var(--gold);margin-top:0}
-        label{display:block;font-weight:700;margin:10px 0 5px}
-        input,select,textarea{width:100%;padding:11px;border:1px solid #4b5148;background:#090c09;color:white;border-radius:9px;font:inherit}
-        textarea{min-height:80px;resize:vertical}
-        .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
-        .muted{color:var(--muted);font-size:14px}
-        .notice{background:#2c2919;border:1px solid #79672c;border-radius:10px;padding:12px;color:#f6e6a4;margin:10px 0}
-        .notice.success{background:rgba(74,222,128,.1);border-color:#4ade80;color:#9be3a5}
-        .notice.error{background:rgba(255,119,119,.1);border-color:#ff7777;color:#ffb3b3}
-        .status-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;margin-bottom:14px;background:rgba(255,255,255,.05)}
-        .status-dot{width:12px;height:12px;border-radius:50%;animation:pulso 2s infinite}
-        .status-dot.online{background:var(--ok);box-shadow:0 0 10px var(--ok)}
-        .status-dot.offline{background:var(--red);box-shadow:0 0 10px var(--red)}
-        @keyframes pulso{0%{opacity:1}50%{opacity:.4}100%{opacity:1}}
-        .dispo-buttons{display:flex;gap:10px;margin:10px 0}
-        .dispo-buttons button{flex:1}
-        .dispo-buttons button.online-btn{background:var(--ok);color:#0a2e1f}
-        .dispo-buttons button.offline-btn{background:var(--red);color:#2e0f0f}
-        .order{border:1px solid #454b40;border-radius:12px;padding:14px;margin:12px 0;background:#0d100d;transition:transform .2s}
-        .order:hover{transform:translateY(-2px)}
-        .order.nuevo{border-color:var(--gold);box-shadow:0 0 12px rgba(242,201,76,.3);animation:resaltar 1s ease-out}
-        @keyframes resaltar{0%{box-shadow:0 0 20px rgba(242,201,76,.5)}100%{box-shadow:0 0 12px rgba(242,201,76,.3)}}
-        .pill{display:inline-block;padding:4px 9px;border-radius:99px;background:#334934;color:#c9f3c8;font-size:12px;font-weight:800}
-        .pill.nuevo{background:var(--gold);color:#000;font-weight:900}
-        .pill.aceptado{background:#60a5fa;color:#dbeafe}
-        .pill.entregado{background:var(--ok);color:#dcfce7}
-        .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-        .oferta-box{background:rgba(242,201,76,.1);border:1px solid var(--gold);border-radius:10px;padding:10px;margin:8px 0}
-        .precio-oferta{font-size:22px;font-weight:900;color:var(--gold)}
-        footer{text-align:center;color:var(--muted);padding:18px;font-size:12px}
-        .oculto{display:none !important}
-        #mapPickup,#mapDrop{height:220px;border-radius:12px;overflow:hidden;margin-top:8px}
-        .alerta-flotante{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#f2c94c,#d4a82f);color:#000;padding:14px 20px;border-radius:12px;box-shadow:0 5px 25px rgba(242,201,76,.4);z-index:9999;text-align:center;max-width:92%;font-weight:700;animation:subir .3s ease-out}
-        @keyframes subir{from{transform:translateY(-100%) translateX(-50%);opacity:0}to{transform:translateX(-50%);opacity:1}}
-    </style>
-</head>
-<body>
-<header>
-    <img class="brand-logo" src="https://lh3.googleusercontent.com/d/1cIaAAliaMiiCfHTzGE0m3fTqj3URSwn0" alt="Logo Valle Entregas">
-    <div class="brand">VALLE ENTREGAS</div>
-    <div class="tag">De todo, hasta tu puerta.</div>
-    <div class="tag">Yaruquí · Pifo · El Quinche · Cumbayá</div>
-</header>
-
-<nav>
-    <button onclick="showView('cliente')">Pedir entrega</button>
-    <button class="secondary" onclick="showView('motorizado')">🏍️ Motorizado</button>
-</nav>
-
-<main>
-    <div class="notice" id="configWarn">⚙️ Conectando sistema...</div>
-
-    <!-- ========== CLIENTE ========== -->
-    <section id="clienteView">
-        <div class="card">
-            <h1>Solicita tu entrega</h1>
-            <p class="muted">Marca los puntos y envía tu solicitud. Los motorizados disponibles verán tu oferta.</p>
-
-            <form id="orderForm">
-                <div class="grid">
-                    <div>
-                        <label for="nombre">Tu nombre</label>
-                        <input id="nombre" required maxlength="100" placeholder="Nombre y apellido">
-                    </div>
-                    <div>
-                        <label for="telefono">Tu WhatsApp</label>
-                        <input id="telefono" required inputmode="tel" maxlength="20" placeholder="09xxxxxxxx">
-                    </div>
-                </div>
-
-                <h3>📍 Recogida</h3>
-                <div class="grid">
-                    <div>
-                        <label for="zonaRecogida">Sector</label>
-                        <select id="zonaRecogida">
-                            <option value="yaruqui">Yaruquí</option>
-                            <option value="pifo">Pifo</option>
-                            <option value="quinche">El Quinche</option>
-                            <option value="cumbaya">Cumbayá</option>
-                            <option value="otra">Otro</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="refRecogida">Referencia</label>
-                        <input id="refRecogida" required placeholder="Calle, local, punto de referencia">
-                    </div>
-                </div>
-                <div id="mapPickup"></div>
-                <div class="actions">
-                    <button type="button" class="secondary" onclick="useGPS('pickup')">📍 Mi ubicación</button>
-                </div>
-
-                <h3>🏠 Entrega</h3>
-                <div class="grid">
-                    <div>
-                        <label for="zonaEntrega">Sector</label>
-                        <select id="zonaEntrega">
-                            <option value="yaruqui">Yaruquí</option>
-                            <option value="pifo">Pifo</option>
-                            <option value="quinche">El Quinche</option>
-                            <option value="cumbaya">Cumbayá</option>
-                            <option value="otra">Otro</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="refEntrega">Referencia</label>
-                        <input id="refEntrega" required placeholder="Dirección de entrega">
-                    </div>
-                </div>
-                <div id="mapDrop"></div>
-                <div class="actions">
-                    <button type="button" class="secondary" onclick="useGPS('drop')">📍 Mi ubicación</button>
-                </div>
-
-                <label for="detalle">📦 ¿Qué entregamos?</label>
-                <textarea id="detalle" maxlength="1000" placeholder="Tienda, productos, instrucciones..."></textarea>
-
-                <div class="notice" id="fareBox">Tarifa mínima: se calcula al marcar los puntos</div>
-
-                <label for="ofertaTarifa">💰 Tu oferta</label>
-                <input id="ofertaTarifa" type="text" inputmode="decimal" placeholder="Ej: 4,50">
-                <div class="muted" id="offerHelp">No menor a la tarifa mínima</div>
-
-                <button type="submit" id="submitOrder">✅ ENVIAR SOLICITUD</button>
-            </form>
-            <div id="clientMsg"></div>
-        </div>
-
-        <div class="card">
-            <h2>🔍 Rastrear pedido</h2>
-            <input id="trackId" placeholder="Código de pedido">
-            <div class="actions"><button onclick="trackOrder()">🔍 VER ESTADO</button></div>
-            <div id="trackResult"></div>
-        </div>
-    </section>
-
-    <!-- ========== MOTORIZADO ========== -->
-    <section id="riderView" hidden>
-        <div class="card">
-            <h1>🏍️ Panel del Motorizado</h1>
-
-            <div class="status-bar">
-                <span id="statusDot" class="status-dot offline"></span>
-                <span id="statusText"><b>Estado:</b> Fuera de servicio</span>
-            </div>
-
-            <div class="dispo-buttons">
-                <button class="online-btn" id="btnDisponible" onclick="setDisponible(true)">✅ ESTOY DISPONIBLE</button>
-                <button class="offline-btn" id="btnNoDisponible" onclick="setDisponible(false)">🔴 NO ESTOY DISPONIBLE</button>
-            </div>
-
-            <div class="grid" style="margin-top:14px">
-                <div>
-                    <label for="nombreMotorizado">Tu Nombre</label>
-                    <input id="nombreMotorizado" placeholder="Tu nombre completo">
-                </div>
-                <div>
-                    <label for="telefonoMotorizado">Tu WhatsApp</label>
-                    <input id="telefonoMotorizado" placeholder="09xxxxxxxx">
-                </div>
-            </div>
-
-            <div class="actions" style="margin-top:10px">
-                <button class="secondary" onclick="guardarUbicacion()">📍 ACTUALIZAR MI UBICACIÓN</button>
-                <button class="secondary" id="alertaBtn" onclick="toggleAlertas()">🔔 ACTIVAR ALERTAS</button>
-            </div>
-            <p class="muted" id="alertStatus">Activa las alertas para recibir aviso de nuevos pedidos</p>
-            <p class="muted" id="ubicacionStatus">Ubicación: No registrada</p>
-
-            <hr style="border:none;border-top:1px solid #333;margin:14px 0">
-
-            <h2>📋 Pedidos Disponibles</h2>
-            <p class="muted">Toca ACEPTAR para tomar el pedido — quedará asignado a tu nombre</p>
-            <div id="ordersList">Cargando pedidos...</div>
-        </div>
-    </section>
-</main>
-
-<footer>Valle Entregas · De todo, hasta tu puerta.</footer>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-// ===================================== CONFIGURACIÓN =====================================
-const SUPABASE_URL = "https://jxwtnvdpajaeummasozx.supabase.co";
-const SUPABASE_KEY = "sb_publishable__UkoBaXqLbrYu_U-H_yFWg_OGPnXY2N";
-
-const sbReady = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("PEGA_AQUI");
-const db = sbReady ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
-
-let pickup = null, dropoff = null, pickupMap = null, dropMap = null;
-let motorizadoUbicacion = null;
-let estaDisponible = false;
-let alertasActivas = false;
-let idsVistos = new Set();
-let canalTiempoReal = null;
-const center = [-0.1807, -78.4678];
-const $ = id => document.getElementById(id);
-
-// ===================================== NAVEGACIÓN =====================================
-function showView(which) {
-    $('clienteView').hidden = which !== 'cliente';
-    $('riderView').hidden = which !== 'motorizado';
-    if (which === 'motorizado') {
-        cargarPedidosMotorizado();
-        recuperarEstadoMotorizado();
-    }
-    setTimeout(() => {
-        if (pickupMap) pickupMap.invalidateSize();
-        if (dropMap) dropMap.invalidateSize();
-    }, 150);
+// ================= ALMACENAMIENTO MOVIL =================
+class AppStorage {
+  static late SharedPreferences prefs;
+  static Future<void> init() async {
+    prefs = await SharedPreferences.getInstance();
+  }
+  static String? get(String key) => prefs.getString(key);
+  static Future<void> set(String key, String value) => prefs.setString(key, value);
+  static Future<void> remove(String key) => prefs.remove(key);
+  static bool contains(String key) => prefs.containsKey(key);
 }
 
-// ===================================== MAPAS =====================================
-function initMaps() {
-    pickupMap = L.map('mapPickup').setView(center, 11);
-    dropMap = L.map('mapDrop').setView(center, 11);
-    const tiles = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-    L.tileLayer(tiles, { attribution: '© OpenStreetMap' }).addTo(pickupMap);
-    L.tileLayer(tiles, { attribution: '© OpenStreetMap' }).addTo(dropMap);
-    pickupMap.on('click', e => fijarPunto('pickup', e.latlng.lat, e.latlng.lng));
-    dropMap.on('click', e => fijarPunto('drop', e.latlng.lat, e.latlng.lng));
+// ================= SONIDO UNICO PARA APK =================
+class SonidoService {
+  static final _player = AudioPlayer();
+  static void init() {}
+  static void pip() async {
+    try { await _player.play(AssetSource('pip.mp3')); } catch(_){}
+  }
+  static Future<void> pedirPermiso() async {}
+  static void notificar(String t, String c) { pip(); }
 }
 
-function fijarPunto(which, lat, lng) {
-    if (which === 'pickup') {
-        pickup = { lat, lng };
-        if (window.markerRecogida) pickupMap.removeLayer(window.markerRecogida);
-        window.markerRecogida = L.marker([lat, lng]).addTo(pickupMap).bindPopup('📍 Recogida').openPopup();
-    } else {
-        dropoff = { lat, lng };
-        if (window.markerEntrega) dropMap.removeLayer(window.markerEntrega);
-        window.markerEntrega = L.marker([lat, lng]).addTo(dropMap).bindPopup('🏠 Entrega').openPopup();
-    }
-    calcularTarifa();
+// ================= MODELOS =================
+class OfertaMoto {
+  String motoNombre; double precio; int tiempoEntrega; DateTime fecha;
+  double kmRecogida; int tiempoRecogida;
+  String fotoPerfil; String placa; double rating; int viajes; int puntos;
+  OfertaMoto({required this.motoNombre, required this.precio, required this.tiempoEntrega, required this.fecha, this.kmRecogida=0.5, this.tiempoRecogida=3, this.fotoPerfil='https://i.pravatar.cc/150?img=32', this.placa='ABC-1234', this.rating=4.8, this.viajes=127, this.puntos=450});
+  Map<String,dynamic> toMap()=> {'motoNombre':motoNombre,'precio':precio,'tiempoEntrega':tiempoEntrega,'fecha':fecha.toIso8601String(),'kmRecogida':kmRecogida,'tiempoRecogida':tiempoRecogida,'fotoPerfil':fotoPerfil,'placa':placa,'rating':rating,'viajes':viajes,'puntos':puntos};
+  Map<String,dynamic> toJson()=> toMap();
+  static OfertaMoto fromMap(Map m)=> OfertaMoto(motoNombre:m['motoNombre'],precio:(m['precio'] as num).toDouble(),tiempoEntrega:m['tiempoEntrega'],fecha:DateTime.parse(m['fecha']),kmRecogida:(m['kmRecogida']??0.5).toDouble(),tiempoRecogida:m['tiempoRecogida']??3, fotoPerfil:m['fotoPerfil']??'https://i.pravatar.cc/150?img=32', placa:m['placa']??'ABC-1234', rating:(m['rating']??4.8).toDouble(), viajes:m['viajes']??0, puntos:m['puntos']??0);
+  static OfertaMoto fromJson(Map m)=> fromMap(m);
 }
 
-async function useGPS(which) {
-    if (!navigator.geolocation) return alert('❌ GPS no disponible');
-    const btn = event.target;
-    btn.disabled = true; btn.textContent = 'Buscando...';
-    
-    navigator.geolocation.getCurrentPosition(
-        pos => {
-            fijarPunto(which, pos.coords.latitude, pos.coords.longitude);
-            (which === 'pickup' ? pickupMap : dropMap).setView([pos.coords.latitude, pos.coords.longitude], 16);
-        },
-        () => alert('No se pudo obtener ubicación — marca manualmente'),
-        { enableHighAccuracy: true, timeout: 15000 }
-    );
-    setTimeout(() => { btn.disabled = false; btn.textContent = which === 'pickup' ? '📍 Mi ubicación' : '📍 Mi ubicación'; }, 2000);
+class RatingModel { String motoNombre; int estrellas; String comentario; String cliente; DateTime fecha; RatingModel({required this.motoNombre, required this.estrellas, required this.comentario, required this.cliente, required this.fecha}); Map toMap()=>{'motoNombre':motoNombre,'estrellas':estrellas,'comentario':comentario,'cliente':cliente,'fecha':fecha.toIso8601String()}; }
+class MensajeChat { String remitente; String texto; DateTime fecha; MensajeChat({required this.remitente, required this.texto, required this.fecha}); Map toMap()=>{'remitente':remitente,'texto':texto,'fecha':fecha.toIso8601String()}; static MensajeChat fromMap(Map m)=> MensajeChat(remitente:m['remitente'],texto:m['texto'],fecha:DateTime.parse(m['fecha'])); }
+
+// ================= SERVICIOS MIGRADOS A MOVIL =================
+class MotoAuthService {
+  static const _key = 'moto_registrado_wanki';
+  static bool estaRegistrado() => AppStorage.contains(_key);
+  static Map<String,dynamic> getMoto(){
+    if(!estaRegistrado()) return {};
+    return jsonDecode(AppStorage.get(_key)!);
+  }
+  static Future<void> registrar({required String nombre, required String placa, required String telefono, required String cedula, required String fotoBase64}) async {
+    var data = {'nombre': nombre,'placa': placa.toUpperCase(),'telefono': telefono,'cedula': cedula,'foto': fotoBase64,'saldo': 3.50,'fecha': DateTime.now().toIso8601String(),'verificado': false};
+    await AppStorage.set(_key, jsonEncode(data));
+    try{
+      var listaRaw = AppStorage.get('motos_wanki')?? '[]';
+      var lista = jsonDecode(listaRaw) as List;
+      lista.add({'nombre':nombre,'placa':placa.toUpperCase(),'telefono':telefono,'cedula':cedula,'saldo':3.50,'bloqueado':false,'tieneFoto':true});
+      await AppStorage.set('motos_wanki', jsonEncode(lista));
+    }catch(e){}
+  }
+  static Future<void> cerrarSesion() async => AppStorage.remove(_key);
 }
 
-// ===================================== TARIFAS =====================================
-function calcularDistanciaKm() {
-    if (!pickup || !dropoff) return null;
-    const R = 6371, rad = n => n * Math.PI / 180;
-    const dLat = rad(dropoff.lat - pickup.lat);
-    const dLon = rad(dropoff.lng - pickup.lng);
-    const a = Math.sin(dLat/2)**2 + Math.cos(rad(pickup.lat)) * Math.cos(rad(dropoff.lat)) * Math.sin(dLon/2)**2;
-    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+class RatingService {
+  static List<RatingModel> _ratings=[];
+  static void cargar(){ try{ var j=AppStorage.get('wanki_ratings_v1'); if(j!=null){ var l=jsonDecode(j) as List; _ratings=l.map((e)=>RatingModel(motoNombre:e['motoNombre'],estrellas:e['estrellas'],comentario:e['comentario'],cliente:e['cliente'],fecha:DateTime.parse(e['fecha']))).toList(); } }catch(_){} }
+  static void guardar(){ try{ AppStorage.set('wanki_ratings_v1', jsonEncode(_ratings.map((e)=>e.toMap()).toList())); }catch(_){} }
+  static void agregar(RatingModel r){ _ratings.insert(0,r); guardar(); }
+  static List<RatingModel> porMoto(String nombre)=> _ratings.where((r)=>r.motoNombre==nombre).toList();
 }
 
-function calcularTarifa() {
-    const km = calcularDistanciaKm();
-    const zona1 = $('zonaRecogida').value;
-    const zona2 = $('zonaEntrega').value;
-
-    const base = zona1 === zona2 ? 2.5 : 3.5;
-    const extraDist = km ? Math.max(0, km - 3) * 0.45 : 0;
-
-    const minima = Math.round((base + extraDist) * 100) / 100;
-
-    $('fareBox').textContent =
-    `Tarifa mínima: $${minima.toFixed(2)}${km ? ` · ${km.toFixed(1)} km` : ''}`;
-    return minima;
+class RankingMoto { String nombre; String foto; double rating; int viajes; int puntos; double comision; RankingMoto({required this.nombre, required this.foto, required this.rating, required this.viajes, required this.puntos, required this.comision}); }
+class RankingService {
+  static List<RankingMoto> getRanking(){
+    var base = [
+      RankingMoto(nombre:'Moto 23 - Carlos', foto:'https://i.pravatar.cc/150?img=12', rating:4.9, viajes:340, puntos:980, comision:8.1),
+      RankingMoto(nombre:'Moto 07 - Bryan', foto:'https://i.pravatar.cc/150?img=32', rating:4.8, viajes:310, puntos:920, comision:9.8),
+      RankingMoto(nombre:'Moto 15 - Jhon', foto:'https://i.pravatar.cc/150?img=15', rating:4.8, viajes:295, puntos:890, comision:9.8),
+      RankingMoto(nombre:'Moto 99 - Tu', foto:'https://i.pravatar.cc/150?img=8', rating:4.7, viajes:127, puntos:450, comision:10.8),
+      RankingMoto(nombre:'Moto 05 - Kevin', foto:'https://i.pravatar.cc/150?img=20', rating:4.6, viajes:110, puntos:380, comision:11.8),
+    ];
+    base.sort((a,b) => b.puntos.compareTo(a.puntos));
+    for(int i=0; i<base.length; i++){ if(i==0) base[i].comision = 8.1; else if(i<3) base[i].comision = 9.8; else if(i<10) base[i].comision = 10.8; else base[i].comision = 11.8; }
+    return base;
+  }
 }
 
-function monto(valor) {
-    if (valor == null || String(valor).trim() === '') {
-        return NaN;
-    }
-
-    let t = String(valor)
-        .trim()
-        .replace(/\$/g, '')
-        .replace(/\s/g, '');
-
-    if (t.includes(',')) {
-        t = t.replace(/\./g, '').replace(',', '.');
-    }
-
-    const numero = Number(t);
-
-    return Number.isFinite(numero) ? numero : NaN;
+class SaldoPrepagoService {
+  static const _keySaldo = 'wanki_saldo_prepago_moto99';
+  static double getSaldo() { return double.tryParse(AppStorage.get(_keySaldo)?? '3.50')?? 3.50; }
+  static void setSaldo(double valor) { AppStorage.set(_keySaldo, valor.toStringAsFixed(2)); }
+  static bool descontarComision(double precioViaje, double porcentaje) {
+    double comision = precioViaje * (porcentaje / 100);
+    double saldoActual = getSaldo();
+    if (saldoActual < comision) return false;
+    setSaldo(saldoActual - comision);
+    return true;
+  }
+  static void recargar(double monto) { setSaldo(getSaldo() + monto); }
 }
 
-$('ofertaTarifa')?.addEventListener('blur', () => {
-    const min = calcularTarifa();
-    const val = monto($('ofertaTarifa').value);
+class GananciasService {
+  static const _key = 'wanki_ganancias_v1';
+  static List<Map> _lista = [];
+  static void cargar(){ try{ var raw = AppStorage.get(_key); if(raw!=null){ _lista = (jsonDecode(raw) as List).cast<Map>(); } }catch(_){} }
+  static void guardar(){ try{ AppStorage.set(_key, jsonEncode(_lista)); }catch(_){} }
+  static void sumar(double montoBruto, double km, double porcentajeComision){
+    cargar();
+    double comision = montoBruto * (porcentajeComision / 100);
+    double gananciaNeta = montoBruto - comision;
+    String hoy = DateTime.now().toIso8601String().substring(0,10);
+    _lista.add({'fecha': hoy, 'montoBruto': montoBruto, 'comision': comision, 'gananciaNeta': gananciaNeta, 'km': km, 'hora': DateTime.now().toIso8601String()});
+    guardar();
+  }
+  static Map<String,dynamic> hoy(){
+    cargar();
+    String hoyStr = DateTime.now().toIso8601String().substring(0,10);
+    var deHoy = _lista.where((e)=> e['fecha']==hoyStr).toList();
+    double totalBruto = 0; double totalComision = 0; double totalNeta = 0; double kms = 0;
+    for(var e in deHoy){ totalBruto += (e['montoBruto'] as num).toDouble(); totalComision += (e['comision'] as num).toDouble(); totalNeta += (e['gananciaNeta'] as num).toDouble(); kms += (e['km'] as num).toDouble(); }
+    return {'total': totalBruto, 'totalBruto': totalBruto, 'comision': totalComision, 'totalNeta': totalNeta, 'viajes': deHoy.length, 'km': kms};
+  }
+}
 
-    if (!Number.isFinite(val) || val < min) {
-        $('ofertaTarifa').value =
-            min.toFixed(2).replace('.', ',');
-    }
-});
+class SolicitudRecarga { String id; double monto; String comprobanteBase64; String numTransaccion; String estado; DateTime fecha; SolicitudRecarga({required this.id, required this.monto, required this.comprobanteBase64, required this.numTransaccion, this.estado='pendiente', required this.fecha}); Map toJson() => {'id':id, 'monto':monto, 'comprobanteBase64':comprobanteBase64, 'numTransaccion':numTransaccion, 'estado':estado, 'fecha':fecha.toIso8601String()}; static SolicitudRecarga fromJson(Map m) => SolicitudRecarga(id:m['id'], monto:(m['monto'] as num).toDouble(), comprobanteBase64:m['comprobanteBase64'], numTransaccion:m['numTransaccion'], estado:m['estado'], fecha:DateTime.parse(m['fecha'])); }
+class RecargasPendientesService {
+  static const _key = 'wanki_solicitudes_recarga';
+  static List<SolicitudRecarga> getTodas() { try { var raw = AppStorage.get(_key); if(raw==null) return []; var list = jsonDecode(raw) as List; return list.map((e)=> SolicitudRecarga.fromJson(e)).toList(); } catch(_){ return []; } }
+  static void guardar(SolicitudRecarga s) { var todas = getTodas(); todas.insert(0, s); AppStorage.set(_key, jsonEncode(todas.map((e)=>e.toJson()).toList())); }
+  static void aprobar(String id) { var todas = getTodas(); var idx = todas.indexWhere((e)=>e.id==id); if(idx!=-1){ todas[idx].estado='aprobada'; AppStorage.set(_key, jsonEncode(todas.map((e)=>e.toJson()).toList())); SaldoPrepagoService.recargar(todas[idx].monto); } }
+}
 
-['zonaRecogida', 'zonaEntrega'].forEach(id => {
-    $(id)?.addEventListener('change', calcularTarifa);
-});
+class ChatService {
+  static Map<String, List<MensajeChat>> _chats={};
+  static void cargar(){ try{ var j=AppStorage.get('wanki_chats_v1'); if(j!=null){ var map=jsonDecode(j) as Map; _chats={}; map.forEach((k,v){ _chats[k]=(v as List).map((e)=>MensajeChat.fromMap(e)).toList(); }); } }catch(_){} }
+  static void guardar(){ try{ var map={}; _chats.forEach((k,v){ map[k]=v.map((e)=>e.toMap()).toList(); }); AppStorage.set('wanki_chats_v1', jsonEncode(map)); }catch(_){} }
+  static List<MensajeChat> getMensajes(String pedidoId){ cargar(); return _chats[pedidoId]??[]; }
+  static void enviar(String pedidoId, String remitente, String texto){ cargar(); _chats.putIfAbsent(pedidoId, ()=>[]); _chats[pedidoId]!.add(MensajeChat(remitente:remitente,texto:texto,fecha:DateTime.now())); guardar(); }
+  static void limpiar(String pedidoId){ cargar(); _chats.remove(pedidoId); guardar(); }
+}
 
-// =====================================
-// ENVIAR PEDIDO
-// =====================================
+class PedidoModel {
+  String id; LatLng recogida; LatLng entrega; double km; int tiempo; double precioCliente; String pin; String pinRecogidaMoto; String estado; List<OfertaMoto> ofertas; OfertaMoto? ofertaGanadora; OfertaMoto? aceptadoSinOferta; DateTime fecha; List<LatLng> rutaOSRM; bool notificado;
+  String clienteNombre; String clienteFoto; String descripcionPaquete; bool tieneFotoPaquete; String fotoPaqueteBase64;
+  PedidoModel({required this.id, required this.recogida, required this.entrega, required this.km, required this.tiempo, required this.precioCliente, required this.pin, this.pinRecogidaMoto='', this.estado='pendiente', this.ofertas=const [], this.ofertaGanadora, this.aceptadoSinOferta, required this.fecha, this.rutaOSRM=const [], this.notificado=false, this.clienteNombre='Cliente Wanki', this.clienteFoto='https://i.pravatar.cc/150?img=5', this.descripcionPaquete='Paquete sin descripción', this.tieneFotoPaquete=false, this.fotoPaqueteBase64=''});
+  Map<String,dynamic> toJson()=>{'id':id,'recLat':recogida.latitude,'recLng':recogida.longitude,'entLat':entrega.latitude,'entLng':entrega.longitude,'km':km,'tiempo':tiempo,'precio':precioCliente,'pin':pin,'pinRecogidaMoto':pinRecogidaMoto,'estado':estado,'ofertas':ofertas.map((e)=>e.toJson()).toList(),'ganadora':ofertaGanadora?.toJson(),'aceptadoSinOferta':aceptadoSinOferta?.toJson(),'fecha':fecha.toIso8601String(),'ruta':rutaOSRM.map((e)=>{'lat':e.latitude,'lng':e.longitude}).toList(),'notificado':notificado,'clienteNombre':clienteNombre,'clienteFoto':clienteFoto,'descripcionPaquete':descripcionPaquete,'tieneFotoPaquete':tieneFotoPaquete,'fotoPaqueteBase64':fotoPaqueteBase64};
+  factory PedidoModel.fromJson(Map<String,dynamic> j)=>PedidoModel(id:j['id'], recogida:LatLng((j['recLat'] as num).toDouble(),(j['recLng'] as num).toDouble()), entrega:LatLng((j['entLat'] as num).toDouble(),(j['entLng'] as num).toDouble()), km:(j['km'] as num).toDouble(), tiempo:j['tiempo'], precioCliente:(j['precio'] as num).toDouble(), pin:j['pin']??'', pinRecogidaMoto:j['pinRecogidaMoto']??'', estado:j['estado'], ofertas:(j['ofertas'] as List).map((e)=>OfertaMoto.fromJson(e)).toList(), ofertaGanadora:j['ganadora']!=null?OfertaMoto.fromJson(j['ganadora']):null, aceptadoSinOferta:j['aceptadoSinOferta']!=null?OfertaMoto.fromJson(j['aceptadoSinOferta']):null, fecha:DateTime.parse(j['fecha']), rutaOSRM: j['ruta']!=null? (j['ruta'] as List).map((e)=>LatLng((e['lat'] as num).toDouble(), (e['lng'] as num).toDouble())).toList():[], notificado:j['notificado']??false, clienteNombre:j['clienteNombre']??'Cliente Wanki', clienteFoto:j['clienteFoto']??'https://i.pravatar.cc/150?img=5', descripcionPaquete:j['descripcionPaquete']??'Sin descripción', tieneFotoPaquete:j['tieneFotoPaquete']??false, fotoPaqueteBase64:j['fotoPaqueteBase64']??'');
+}
 
-$('orderForm').addEventListener('submit', async e => {
-    e.preventDefault();
+class PedidosService {
+  static const _key = 'wanki_pedidos_v3';
+  static const _keyAceptados = 'wanki_aceptados_v3';
+  static const _keyCancelado = 'wanki_ultimo_cancelado';
+  static List<PedidoModel> activos = [];
+  static void cargar() { try { var raw = AppStorage.get(_key); if(raw==null){activos=[];return;} var list = jsonDecode(raw) as List; activos = list.map((e)=> PedidoModel.fromJson(e)).toList(); } catch(e){ activos=[]; } }
+  static void guardar(){ AppStorage.set(_key, jsonEncode(activos.map((e)=> e.toJson()).toList()); }
+  static void agregar(PedidoModel p){ cargar(); activos.add(p); guardar(); }
+  static void quitar(String id){ cargar(); activos.removeWhere((e)=> e.id==id); guardar(); }
+  static String _generarPinRecogida(){ return (1000 + Random().nextInt(9000)).toString(); }
+  static void agregarOferta(String pedidoId, OfertaMoto oferta){ cargar(); var idx = activos.indexWhere((e)=> e.id==pedidoId); if(idx!=-1){ activos[idx].ofertas.add(oferta); guardar(); } }
+  static void rechazarOferta(String pedidoId, String nombreMoto){ cargar(); var idx = activos.indexWhere((e)=> e.id==pedidoId); if(idx!=-1){ activos[idx].ofertas.removeWhere((o)=> o.motoNombre==nombreMoto); guardar(); } }
+  static void aceptarOferta(String pedidoId, OfertaMoto ganadora){ cargar(); var idx = activos.indexWhere((e)=> e.id==pedidoId); if(idx!=-1){ activos[idx].ofertaGanadora=ganadora; activos[idx].pinRecogidaMoto=_generarPinRecogida(); activos[idx].estado='aceptado'; guardar(); AppStorage.set(_keyAceptados, jsonEncode(activos[idx].toJson())); } }
+  static void aceptarSinOferta(String pedidoId, OfertaMoto moto){ cargar(); var idx = activos.indexWhere((e)=> e.id==pedidoId); if(idx!=-1){ activos[idx].aceptadoSinOferta=moto; activos[idx].ofertaGanadora=moto; activos[idx].pinRecogidaMoto=_generarPinRecogida(); activos[idx].estado='aceptado_sin_oferta'; guardar(); AppStorage.set(_keyAceptados, jsonEncode(activos[idx].toJson())); } }
+  static PedidoModel? getAceptado(){ try{ var raw=AppStorage.get(_keyAceptados); if(raw==null) return null; return PedidoModel.fromJson(jsonDecode(raw)); }catch(e){return null;} }
+  static void cancelarPorCliente(String id){ AppStorage.set(_keyCancelado, jsonEncode({'id': id, 'fecha': DateTime.now().toIso8601String()})); cargar(); activos.removeWhere((e)=> e.id==id); guardar(); AppStorage.remove(_keyAceptados); ChatService.limpiar(id); }
+  static void cancelarPorMoto(String id){ cargar(); var idx = activos.indexWhere((e)=> e.id==id); if(idx!=-1){ activos[idx].estado='pendiente'; activos[idx].ofertaGanadora=null; activos[idx].aceptadoSinOferta=null; activos[idx].pinRecogidaMoto=''; guardar(); AppStorage.remove(_keyAceptados); } }
+  static void marcarRecogido(String id){ var acept = getAceptado(); if(acept!=null && acept.id==id){ acept.estado='en_camino'; AppStorage.set(_keyAceptados, jsonEncode(acept.toJson())); } cargar(); var idx = activos.indexWhere((e)=> e.id==id); if(idx!=-1){ activos[idx].estado='en_camino'; guardar(); } }
+  static Map<String,dynamic>? getUltimoCancelado(){ try{ var raw=AppStorage.get(_keyCancelado); if(raw==null) return null; return jsonDecode(raw); }catch(e){return null;} }
+  static void limpiarCancelado(){ AppStorage.remove(_keyCancelado); }
+  static void limpiarCaducados(){ cargar(); int antes = activos.length; activos.removeWhere((p){ bool caducado = DateTime.now().difference(p.fecha).inMinutes > 15; return caducado; }); if(activos.length!= antes) guardar(); }
+  static List<PedidoModel> getPendientesValidos(Set<String> rechazados){ cargar(); limpiarCaducados(); return activos.where((p){ if(p.estado!= 'pendiente') return false; if(rechazados.contains(p.id)) return false; if(DateTime.now().difference(p.fecha).inMinutes > 15) return false; return true; }).toList(); }
+}
 
-    if (!db) {
-        return alert('Base de datos sin conexión');
-    }
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AppStorage.init();
+  SonidoService.init();
+  runApp(WankiApp());
+}
 
-    const nombre = $('nombre').value.trim();
-    const tel = $('telefono').value.trim();
-    const refRecog = $('refRecogida').value.trim();
-    const refEntr = $('refEntrega').value.trim();
+class WankiApp extends StatelessWidget { @override Widget build(BuildContext context) { return MaterialApp(debugShowCheckedModeBanner:false, home: SplashWanki()); } }
+class SplashWanki extends StatefulWidget { @override State<SplashWanki> createState()=> _SplashWankiState(); }
+class _SplashWankiState extends State<SplashWanki> with SingleTickerProviderStateMixin { late AnimationController ctrl; late Animation<double> anim; @override void initState(){ super.initState(); ctrl=AnimationController(vsync:this, duration:Duration(milliseconds:900))..repeat(reverse:true); anim=Tween(begin:1.0,end:1.15).animate(CurvedAnimation(parent:ctrl,curve:Curves.easeInOut)); Future.delayed(Duration(milliseconds:2200),(){ Navigator.pushReplacement(context, MaterialPageRoute(builder:(_)=>HomeWanki())); }); } @override void dispose(){ ctrl.dispose(); super.dispose(); } @override Widget build(BuildContext context){ return Scaffold(backgroundColor:Colors.black, body:Center(child:Column(mainAxisAlignment:MainAxisAlignment.center, children:[ ScaleTransition(scale:anim, child: Image.asset('assets/logo.png', width: 360, height: 360, filterQuality: FilterQuality.high, isAntiAlias: true, fit: BoxFit.contain, errorBuilder:(c,e,s)=>Container(width:260,height:260,decoration:BoxDecoration(color:Color(0xFFD4AF37),borderRadius:BorderRadius.circular(40)),child:Center(child:Text('W',style:TextStyle(fontSize:120,fontWeight:FontWeight.w900)))))), SizedBox(height:20), Text('WANKI',style:TextStyle(color:Color(0xFFD4AF37),fontSize:42,fontWeight:FontWeight.w900,letterSpacing:8)), Text('SEGURIDAD SIN DEMORAS',style:TextStyle(color:Color(0xFF00FF88),fontSize:13,letterSpacing:3,fontWeight:FontWeight.bold)) ])) ); } }
+class HomeWanki extends StatelessWidget { @override Widget build(BuildContext context){ return Scaffold(backgroundColor:Colors.black, body:Center(child:Padding(padding:EdgeInsets.all(24), child:Column(mainAxisAlignment:MainAxisAlignment.center, children:[ Image.asset('assets/logo.png', width: 280, height: 280, filterQuality: FilterQuality.high, fit: BoxFit.contain, errorBuilder:(c,e,s)=>Container(width:200,height:200,decoration:BoxDecoration(color:Color(0xFFD4AF37),borderRadius:BorderRadius.circular(30)),child:Center(child:Text('W',style:TextStyle(fontSize:90,fontWeight:FontWeight.w900))))), SizedBox(height:10), Text('WANKI',style:TextStyle(color:Color(0xFFD4AF37),fontSize:28,fontWeight:FontWeight.w900,letterSpacing:6)), SizedBox(height:50), SizedBox(width:double.infinity, child:ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Colors.white,foregroundColor:Colors.black,padding:EdgeInsets.symmetric(vertical:20),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16))), onPressed:(){ Navigator.push(context, MaterialPageRoute(builder:(_)=>ClienteMapaV2())); }, child:Column(children:[Text('SOY CLIENTE',style:TextStyle(fontWeight:FontWeight.w900,fontSize:18)), Text('Enviar encomiendas',style:TextStyle(fontSize:13))]))), SizedBox(height:18), SizedBox(width:double.infinity, child:ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Color(0xFFD4AF37),foregroundColor:Colors.black,padding:EdgeInsets.symmetric(vertical:20),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16))), onPressed:(){ 
+  if(MotoAuthService.estaRegistrado()){
+    Navigator.push(context, MaterialPageRoute(builder:(_)=>MotorizadoV2(saldo:3.50)));
+  } else {
+    Navigator.push(context, MaterialPageRoute(builder:(_)=>RegistroMotoScreen()));
+  }
+}, child:Column(children:[Text('SOY MOTORIZADO',style:TextStyle(fontWeight:FontWeight.w900,fontSize:18)), Text('Saldo: \$3.50',style:TextStyle(fontSize:13))])))] ))) ); } }
 
-    if (!pickup || !dropoff) {
-        return alert('Marca ambos puntos en los mapas');
-    }
+class BotonPedirPremium extends StatefulWidget {
+  final bool activo;
+  final double precio;
+  final VoidCallback onTap;
+  BotonPedirPremium({required this.activo, required this.precio, required this.onTap});
+  @override _BotonPedirPremiumState createState()=> _BotonPedirPremiumState();
+}
+class _BotonPedirPremiumState extends State<BotonPedirPremium> with SingleTickerProviderStateMixin {
+  late AnimationController _c;
+  bool cargando = false;
+  @override void initState(){ super.initState(); _c = AnimationController(vsync:this, duration:Duration(milliseconds:1600))..repeat(reverse:true); }
+  @override void dispose(){ _c.dispose(); super.dispose(); }
+  
+  void _press() async {
+    if(!widget.activo || cargando) return;
+    setState(()=> cargando=true);
+    await Future.delayed(Duration(milliseconds:800));
+    widget.onTap();
+    setState(()=> cargando=false);
+  }
 
-    const minTarifa = calcularTarifa();
-    const oferta = monto($('ofertaTarifa').value);
-
-    if (!Number.isFinite(oferta)) {
-        $('ofertaTarifa').value =
-            minTarifa.toFixed(2).replace('.', ',');
-
-        return alert(
-    `Debes ingresar una oferta de al menos $${minTarifa.toFixed(2)}`
-);
-    }
-
-    if (oferta < minTarifa) {
-        $('ofertaTarifa').value =
-            minTarifa.toFixed(2).replace('.', ',');
-
-return alert(
-    `La oferta mínima es $${minTarifa.toFixed(2)}`
-);
-    }
-
-    const distancia = calcularDistanciaKm() || 0;
-
-    const pedido = {
-        cliente_nombre: nombre,
-        cliente_telefono: tel,
-
-        recogida_zona: $('zonaRecogida').value,
-        recogida_referencia: refRecog,
-        recogida_lat: pickup.lat,
-        recogida_lng: pickup.lng,
-
-        entrega_zona: $('zonaEntrega').value,
-        entrega_referencia: refEntr,
-        entrega_lat: dropoff.lat,
-        entrega_lng: dropoff.lng,
-
-        detalle: $('detalle').value.trim() || 'Sin detalle',
-
-        distancia_km: distancia,
-        tarifa_minima: minTarifa,
-        oferta: oferta,
-
-        estado: 'disponible'
-    };
-
-    $('submitOrder').disabled = true;
-
-    try {
-        const { data, error } = await db
-            .from('pedidos')
-            .insert(pedido)
-            .select('id')
-            .single();
-
-        if (error) {
-            console.error(error);
-            return alert('Error: ' + error.message);
+  @override Widget build(BuildContext context){
+    return GestureDetector(
+      onTap: _press,
+      child: AnimatedBuilder(
+        animation:_c,
+        builder:(ctx,_){
+          return Container(
+            width: double.infinity,
+            height: 62,
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: widget.activo? Color(0xFFFF3B1F) : Colors.white10, width: widget.activo? 1.5 : 1),
+              boxShadow: widget.activo ? [BoxShadow(color:Color(0xFFFF3B1F).withOpacity(0.4 + _c.value*0.3), blurRadius:18 + _c.value*10, spreadRadius:1)] : [],
+            ),
+            child: Stack(
+              children: [
+                // Efecto lava interna unico
+                if(widget.activo) Positioned.fill(child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    gradient: LinearGradient(
+                      begin: Alignment(-1 + _c.value*2, -1),
+                      end: Alignment(1 - _c.value*2, 1),
+                      colors: [Colors.black, Color(0xFF1A0A05), Colors.black, Color(0xFF2A1208)]
+                    )
+                  ),
+                )),
+                Center(
+                  child: cargando 
+                  ? Row(mainAxisAlignment:MainAxisAlignment.center, children:[ SizedBox(width:20,height:20, child:CircularProgressIndicator(strokeWidth:2, color:Color(0xFFFF3B1F))), SizedBox(width:10), Text('INVOCANDO MOTOS...', style:TextStyle(color:Color(0xFFFF3B1F), fontSize:10, letterSpacing:2, fontWeight:FontWeight.w900)) ])
+                  : Row(mainAxisAlignment:MainAxisAlignment.center, children:[
+                      Container(padding:EdgeInsets.all(6), decoration:BoxDecoration(color: widget.activo? Color(0xFFFF3B1F) : Colors.white10, shape:BoxShape.circle), child: Text('W', style:TextStyle(color: widget.activo? Colors.black : Colors.white24, fontWeight:FontWeight.w900, fontSize:14))),
+                      SizedBox(width:12),
+                      Column(mainAxisSize:MainAxisSize.min, crossAxisAlignment:CrossAxisAlignment.start, children:[
+                        Text(widget.activo ? 'PEDIR WANKI' : 'COMPLETA DATOS', style:TextStyle(color: widget.activo? Colors.white : Colors.white24, fontWeight:FontWeight.w900, letterSpacing:2.5, fontSize:13)),
+                        if(widget.activo) Text('PRECIO TUYO • SIN COMISIÓN OCULTA', style:TextStyle(color:Colors.white38, fontSize:7, letterSpacing:1))
+                      ]),
+                      SizedBox(width:14),
+                      Container(padding:EdgeInsets.symmetric(horizontal:12,vertical:6), decoration:BoxDecoration(color: widget.activo? Colors.white : Colors.white10, borderRadius:BorderRadius.circular(30)), child:Text('\$${widget.precio.toStringAsFixed(2)}', style:TextStyle(color: widget.activo? Colors.black : Colors.white24, fontWeight:FontWeight.w900, fontSize:14)))
+                    ])
+                ),
+              ],
+            ),
+          );
         }
+      ),
+    );
+  }
+}
+class ClienteMapaV2 extends StatefulWidget {
+@override State<ClienteMapaV2> createState()=> _ClienteMapaV2State(); }
+class _ClienteMapaV2State extends State<ClienteMapaV2> with SingleTickerProviderStateMixin {
+  late AnimationController _pulseCtrl;
+  LatLng quito = LatLng(-0.180653, -78.467838); LatLng? recogida; LatLng? entrega; bool selRecogida=true;
+  TextEditingController cRec=TextEditingController(); TextEditingController cEnt=TextEditingController(); TextEditingController cDesc=TextEditingController(text:'Caja pequeña frágil'); TextEditingController cNombre=TextEditingController(text:'Andrés Cliente');
+  String fotoBase64Paquete=''; bool fotoPaquete=false; XFile? fotoFile; final ImagePicker picker = ImagePicker();
+  double km=0; int tiempoMin=0; double precioBase=0; double ofertaCliente=0;
+  List<LatLng> motosCerca=[]; List<LatLng> rutaReal=[]; bool calculandoRuta=false;
+  bool buscandoUbicacion=false; List<dynamic> sugerenciasRecogida=[]; List<dynamic> sugerenciasEntrega=[]; Timer? debounce; final mapController = MapController();
+  @override void initState(){ super.initState(); 
+    _pulseCtrl = AnimationController(vsync:this, duration:Duration(milliseconds:1200))..repeat();
+    final r=Random(); motosCerca=List.generate(6,(_)=>LatLng(quito.latitude+(r.nextDouble()-0.5)*0.02, quito.longitude+(r.nextDouble()-0.5)*0.02)); }
+      @override void dispose(){ _pulseCtrl.dispose(); mapController.dispose(); cRec.dispose(); cEnt.dispose(); debounce?.cancel(); super.dispose(); }
+  Future<void> irMiUbicacion() async { setState(()=> buscandoUbicacion=true); try { Future<void> _obtenerMiUbicacion() async {
+  var perm = await Geolocator.checkPermission();
+  if(perm==LocationPermission.denied) perm = await Geolocator.requestPermission();
+  var pos = await Geolocator.getCurrentPosition();
+  miPos = LatLng(pos.latitude, pos.longitude);
+}.then((pos) async { var coords = pos.coords; LatLng miPos = LatLng(coords!.latitude!.toDouble(), coords.longitude!.toDouble()); setState(()=> buscandoUbicacion=false); mapController.move(miPos, 16.5); if(selRecogida){ recogida = miPos; _reverseGeocode(miPos, true); } else { entrega = miPos; _reverseGeocode(miPos, false); } if(recogida!=null && entrega!=null) calcularRutaRealOSRM(recogida!, entrega!); }).catchError((e){ setState(()=> buscandoUbicacion=false); }); } catch(e){ setState(()=> buscandoUbicacion=false); } }
+  Future<void> _reverseGeocode(LatLng p, bool esRecogida) async { try{ var url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=${p.latitude}&lon=${p.longitude}&zoom=18'; var res = await http.get(Uri.parse(url), headers:{'User-Agent':'WankiApp'}); if(res.statusCode==200){ var data = jsonDecode(res.body); String dir = data['display_name']??'Ubicación marcada'; setState((){ if(esRecogida) cRec.text = dir.split(',').take(3).join(','); else cEnt.text = dir.split(',').take(3).join(','); }); } }catch(_){} }
+  void _onSearchChanged(String query, bool esRecogida){ if(debounce?.isActive??false) debounce!.cancel(); if(query.length<3){ setState((){ if(esRecogida) sugerenciasRecogida=[]; else sugerenciasEntrega=[]; }); return; } debounce = Timer(Duration(milliseconds:500), ()=> buscarDireccion(query, esRecogida)); }
+  Future<void> buscarDireccion(String query, bool esRecogida) async { try{ var url = 'https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=5&countrycodes=ec'; var res = await http.get(Uri.parse(url), headers:{'User-Agent':'WankiApp'}); if(res.statusCode==200){ var list = jsonDecode(res.body) as List; setState((){ if(esRecogida) sugerenciasRecogida=list; else sugerenciasEntrega=list; }); } }catch(_){} }
+  void seleccionarSugerencia(dynamic item, bool esRecogida){ LatLng pos = LatLng(double.parse(item['lat']), double.parse(item['lon'])); setState((){ if(esRecogida){ recogida=pos; cRec.text=item['display_name'].toString().split(',').take(3).join(','); sugerenciasRecogida=[]; selRecogida=false; } else { entrega=pos; cEnt.text=item['display_name'].toString().split(',').take(3).join(','); sugerenciasEntrega=[]; } mapController.move(pos, 16.0); if(recogida!=null && entrega!=null) calcularRutaRealOSRM(recogida!, entrega!); }); }
 
-        $('clientMsg').innerHTML =
-            `<p class="notice success">
-                ✅ Pedido #${data.id} enviado.
-                Esperando motorizado...
-            </p>`;
-
-        $('trackId').value = data.id;
-
-        $('ofertaTarifa').value =
-            oferta.toFixed(2).replace('.', ',');
-
-    } catch (error) {
-        console.error(error);
-        alert('Error al enviar el pedido: ' + error.message);
-
-    } finally {
-        $('submitOrder').disabled = false;
+  Future<void> calcularRutaRealOSRM(LatLng o, LatLng d) async {
+    setState(()=> calculandoRuta=true);
+    try{
+      var url = 'https://router.project-osrm.org/route/v1/driving/${o.longitude},${o.latitude};${d.longitude},${d.latitude}?overview=full&geometries=geojson';
+      var res = await http.get(Uri.parse(url));
+      if(res.statusCode==200){
+        var data = jsonDecode(res.body);
+        var route = data['routes'][0];
+        double dist = (route['distance'] as num).toDouble();
+        double dur = (route['duration'] as num).toDouble();
+        var coords = route['geometry']['coordinates'] as List;
+        List<LatLng> puntos = coords.map((c)=> LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble())).toList();
+        setState((){
+          km = dist/1000;
+          tiempoMin = (dur/60).ceil();
+          rutaReal = puntos;
+          if(km <= 1.0){ precioBase = 1.50; } else { precioBase = 1.50 + (km - 1) * 0.70 + tiempoMin * 0.05; }
+          precioBase = double.parse(precioBase.toStringAsFixed(2));
+          ofertaCliente = double.parse((precioBase + 1.0).toStringAsFixed(2));
+          calculandoRuta=false;
+        });
+      }else{ throw 'error'; }
+    }catch(e){
+      var distCalc = Distance();
+      double d2 = distCalc(o,d)/1000;
+      setState((){
+        km=d2; tiempoMin=(km*4+3).round();
+        if(km <= 1.0){ precioBase = 1.50; } else { precioBase = 1.50 + (km - 1) * 0.70; }
+        precioBase = double.parse(precioBase.toStringAsFixed(2));
+        ofertaCliente=double.parse((precioBase+1.0).toStringAsFixed(2));
+        rutaReal=[o,d]; calculandoRuta=false;
+      });
     }
-});
-// ===================================== RASTREO =====================================
-async function trackOrder() {
-    const id = $('trackId').value.trim();
+  }
 
-    if (!id || !db) return;
+  Future<void> tomarFotoPaquete() async {
+    try{
+      var foto = await picker.pickImage(source: ImageSource.camera, imageQuality: 50);
+      if(foto!=null){
+        var bytes = await foto.readAsBytes();
+        setState((){
+          fotoFile=foto;
+          fotoPaquete=true;
+          fotoBase64Paquete = base64Encode(bytes);
+        });
+      }
+    }catch(e){
+      var foto = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
+      if(foto!=null){
+        var bytes = await foto.readAsBytes();
+        setState((){
+          fotoFile=foto;
+          fotoPaquete=true;
+          fotoBase64Paquete = base64Encode(bytes);
+        });
+      }
+    }
+  } 
+  void onMapTap(LatLng p){
+    setState((){
+      if(selRecogida){ recogida=p; _reverseGeocode(p, true); selRecogida=false; }
+      else { entrega=p; _reverseGeocode(p, false); }
+      if(recogida!=null && entrega!=null) calcularRutaRealOSRM(recogida!, entrega!);
+    });
+  }
 
-    const { data, error } = await db
-        .from('pedidos')
-        .select('*')
-        .eq('id', id)
-        .single();
+  Widget cajaBusqueda(TextEditingController c, String hint, IconData ic, bool active, bool esRecogida){
+    return Column(crossAxisAlignment:CrossAxisAlignment.start, children:[
+      Container(padding:EdgeInsets.symmetric(horizontal:12,vertical:2), decoration:BoxDecoration(color: active? Colors.white : Color(0xFFF5F5F5), borderRadius:BorderRadius.circular(14), border:Border.all(color:active?Color(0xFFD4AF37):Colors.transparent,width:2), boxShadow: active? [BoxShadow(color:Color(0xFFD4AF37).withOpacity(0.3), blurRadius:10)] : []), child:Row(children:[ Icon(ic,color:active?Color(0xFFD4AF37):Colors.black45,size:18), SizedBox(width:8), Expanded(child:TextField(controller:c, onChanged:(v)=> _onSearchChanged(v, esRecogida), style:TextStyle(color:Colors.black,fontSize:12,fontWeight:FontWeight.w600), decoration:InputDecoration(border:InputBorder.none, hintText:hint, hintStyle:TextStyle(color:Colors.black38, fontSize:11)), onTap:(){ setState(()=> selRecogida=esRecogida); })), if(c.text.isNotEmpty) GestureDetector(onTap:(){ setState((){ c.clear(); if(esRecogida){ sugerenciasRecogida=[]; recogida=null; } else { sugerenciasEntrega=[]; entrega=null; } rutaReal=[]; }); }, child:Icon(Icons.clear, size:16, color:Colors.black45)) ])),
+      if((esRecogida? sugerenciasRecogida : sugerenciasEntrega).isNotEmpty) Container(margin:EdgeInsets.only(top:6), decoration:BoxDecoration(color:Colors.white, borderRadius:BorderRadius.circular(14), boxShadow:[BoxShadow(color:Colors.black26, blurRadius:10)]), child:Column(children:(esRecogida? sugerenciasRecogida : sugerenciasEntrega).map((item)=> ListTile( dense:true, leading:Icon(Icons.location_on, color:Color(0xFFD4AF37), size:16), title:Text(item['display_name'], style:TextStyle(fontSize:11, color:Colors.black87), maxLines:2, overflow:TextOverflow.ellipsis), onTap:()=> seleccionarSugerencia(item, esRecogida), )).toList()))
+    ]);
+  }
 
-    if (error || !data) {
-        $('trackResult').textContent = 'No encontrado';
+  @override Widget build(BuildContext context){
+    bool listo = recogida!=null && entrega!=null && fotoPaquete &&!calculandoRuta;
+    return Scaffold(backgroundColor:Colors.black, body:Column(children:[
+      Container(color:Colors.black, padding:EdgeInsets.fromLTRB(12,40,12,12), child:Column(children:[
+        Row(children:[ Icon(Icons.bolt, color:Color(0xFFD4AF37), size:16), SizedBox(width:6), Text('WANKI EXPRESS', style:TextStyle(color:Color(0xFFD4AF37), fontSize:10, letterSpacing:2, fontWeight:FontWeight.w900)), Spacer(), Container(padding:EdgeInsets.symmetric(horizontal:8,vertical:3), decoration:BoxDecoration(color:Color(0xFF00FF88).withOpacity(0.15), borderRadius:BorderRadius.circular(20)), child:Row(children:[ Container(width:6,height:6,decoration:BoxDecoration(color:Color(0xFF00FF88), shape:BoxShape.circle)), SizedBox(width:4), Text('${motosCerca.length} MOTOS CERCA', style:TextStyle(color:Color(0xFF00FF88), fontSize:8, fontWeight:FontWeight.bold))]))]),
+        SizedBox(height:12),
+        cajaBusqueda(cRec, '¿Dónde recogemos? (Toca el mapa)', Icons.my_location, selRecogida, true),
+        SizedBox(height:8),
+        cajaBusqueda(cEnt, '¿Dónde entregamos? (Toca el mapa)', Icons.flag,!selRecogida, false),
+        SizedBox(height:10),
+        SizedBox(width:double.infinity, child:ElevatedButton.icon( style:ElevatedButton.styleFrom(backgroundColor:Color(0xFF1A1A1A), foregroundColor:Color(0xFF00FF88), padding:EdgeInsets.symmetric(vertical:10), shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(10), side:BorderSide(color:Color(0xFF00FF88).withOpacity(0.5)))), onPressed: buscandoUbicacion? null : irMiUbicacion, icon: Icon(Icons.gps_fixed, size:16), label: Text('📍 USAR MI UBICACIÓN ACTUAL', style:TextStyle(fontSize:10, fontWeight:FontWeight.w900)) ))
+      ])),
+      Expanded(flex:5, child:FlutterMap(mapController: mapController, options:MapOptions(initialCenter:quito,initialZoom:14.8,onTap:(tap,p)=>onMapTap(p)), children:[TileLayer(urlTemplate:'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', subdomains:['a','b','c']), if(rutaReal.isNotEmpty) PolylineLayer(polylines:[
+  Polyline(points:rutaReal,color:Color(0xFFD4AF37).withOpacity(0.4),strokeWidth:10),
+  Polyline(points:rutaReal,color:Color(0xFFD4AF37),strokeWidth:4),
+  Polyline(points:rutaReal,color:Colors.white.withOpacity(0.8),strokeWidth:1.5),
+]), MarkerLayer(markers:[...motosCerca.map((m)=>Marker(point:m,width:50,height:50,child:AnimatedBuilder(animation:_pulseCtrl, builder:(c,child){
+  return Stack(alignment:Alignment.center, children:[
+    Container(width: 30 + (_pulseCtrl.value*20), height: 30 + (_pulseCtrl.value*20), decoration:BoxDecoration(color:Color(0xFF00FF88).withOpacity(0.3 - _pulseCtrl.value*0.3), shape:BoxShape.circle)),
+    Container(width:28,height:28,decoration:BoxDecoration(color:Color(0xFF00FF88),shape:BoxShape.circle, border:Border.all(color:Colors.black,width:2), boxShadow:[BoxShadow(color:Color(0xFF00FF88), blurRadius:12, spreadRadius:2)]), child:Icon(Icons.motorcycle, size:14, color:Colors.black)),
+  ]);
+}))), if(recogida!=null) Marker(point:recogida!,width:50,height:50,child:Icon(Icons.location_on,color:Color(0xFFD4AF37),size:50)), if(entrega!=null) Marker(point:entrega!,width:50,height:50,child:Icon(Icons.flag,color:Colors.redAccent,size:44))])])),
+      Expanded(flex:3, child:Container(width:double.infinity,padding:EdgeInsets.all(16),decoration:BoxDecoration(color:Color(0xFF121212),borderRadius:BorderRadius.vertical(top:Radius.circular(24))), child:SingleChildScrollView(child:Column(children:[
+        if(calculandoRuta) Row(mainAxisAlignment:MainAxisAlignment.center, children:[ SizedBox(width:14,height:14, child:CircularProgressIndicator(strokeWidth:2, color:Color(0xFFD4AF37))), SizedBox(width:8), Text('Calculando ruta real con OSRM...',style:TextStyle(color:Color(0xFFD4AF37),fontSize:11, fontWeight:FontWeight.bold))]),
+        if(precioBase>0) Container(margin:EdgeInsets.only(top:4),padding:EdgeInsets.all(14),decoration:BoxDecoration(gradient:LinearGradient(colors:[Colors.black, Color(0xFF1A1A1A)]), borderRadius:BorderRadius.circular(16), border:Border.all(color:Color(0xFFD4AF37).withOpacity(0.2))), child:Column(children:[
+          Row(mainAxisAlignment:MainAxisAlignment.spaceBetween, children:[Column(crossAxisAlignment:CrossAxisAlignment.start, children:[ Text('PRECIO SUGERIDO', style:TextStyle(color:Colors.white38,fontSize:8, letterSpacing:1)), Row(children:[ Text('\$${precioBase.toStringAsFixed(2)}',style:TextStyle(color:Colors.white38,fontSize:12, decoration:TextDecoration.lineThrough)), SizedBox(width:6), Text('${km.toStringAsFixed(2)} km • $tiempoMin min', style:TextStyle(color:Colors.white24,fontSize:9))])]), Container(padding:EdgeInsets.symmetric(horizontal:10,vertical:4), decoration:BoxDecoration(color:Color(0xFF00FF88).withOpacity(0.15), borderRadius:BorderRadius.circular(20)), child:Text('6 MOTOS VIENDO', style:TextStyle(color:Color(0xFF00FF88), fontSize:8, fontWeight:FontWeight.bold)))]),
+          SizedBox(height:12),
+          Row(mainAxisAlignment:MainAxisAlignment.spaceBetween, children:[ Text('TU OFERTA', style:TextStyle(color:Color(0xFFD4AF37), fontSize:10, fontWeight:FontWeight.bold)), Text('Mientras más ofrezcas, más rápido llega', style:TextStyle(color:Colors.white24, fontSize:8))]),
+          SizedBox(height:6),
+          Row(children:[ GestureDetector(onTap:(){ setState(()=> ofertaCliente = max(precioBase, ofertaCliente-0.25)); }, child:Container(padding:EdgeInsets.all(8), decoration:BoxDecoration(color:Colors.white10, shape:BoxShape.circle), child:Icon(Icons.remove, color:Colors.white, size:18))), Expanded(child:Center(child: Text('\$${ofertaCliente.toStringAsFixed(2)}',style:TextStyle(color:Color(0xFFD4AF37),fontWeight:FontWeight.w900,fontSize:32)))), GestureDetector(onTap:(){ setState(()=> ofertaCliente+=0.25); }, child:Container(padding:EdgeInsets.all(8), decoration:BoxDecoration(color:Color(0xFFD4AF37), shape:BoxShape.circle), child:Icon(Icons.add, color:Colors.black, size:18))) ])])),
+        SizedBox(height:10),
+        GestureDetector(onTap: tomarFotoPaquete, child:Container(padding:EdgeInsets.all(12),decoration:BoxDecoration(color:fotoPaquete?Color(0xFF00FF88).withOpacity(0.15):Colors.black,borderRadius:BorderRadius.circular(12), border:Border.all(color:fotoPaquete?Color(0xFF00FF88):Colors.white10)), child:Row(children:[ Container(padding:EdgeInsets.all(6), decoration:BoxDecoration(color:fotoPaquete?Color(0xFF00FF88):Colors.white10, borderRadius:BorderRadius.circular(8)), child:Icon(fotoPaquete?Icons.check:Icons.camera_alt,color:fotoPaquete?Colors.black:Colors.white54, size:16)), SizedBox(width:10), Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start, children:[Text(fotoPaquete?'Foto lista ✓':'Foto del paquete *obligatoria',style:TextStyle(color:fotoPaquete?Color(0xFF00FF88):Colors.white, fontWeight:FontWeight.bold, fontSize:12)), Text(fotoPaquete? fotoFile!.name : 'Toca para tomar foto real', style:TextStyle(color:Colors.white38, fontSize:9))])), if(fotoPaquete) Icon(Icons.verified, color:Color(0xFF00FF88), size:18) ]))),
+        SizedBox(height:14),
+                BotonPedirPremium(
+          precio: ofertaCliente,
+          activo: listo,
+          onTap: (){
+            int pinRandom=1000+Random().nextInt(9000);
+                var nuevo=PedidoModel(id:DateTime.now().millisecondsSinceEpoch.toString(), precioCliente:ofertaCliente, km:km, tiempo:tiempoMin, recogida:recogida!, entrega:entrega!, pin:pinRandom.toString(), fecha:DateTime.now(), rutaOSRM:rutaReal, clienteNombre:cNombre.text, descripcionPaquete:cDesc.text, tieneFotoPaquete:fotoPaquete, clienteFoto:'https://i.pravatar.cc/150?img=${Random().nextInt(60)+1}', fotoPaqueteBase64:fotoBase64Paquete);
+                PedidosService.agregar(nuevo);
+            Navigator.push(context, MaterialPageRoute(builder:(_)=>PedidoVivoV2(pedido:nuevo,motos:motosCerca)));
+          },
+        ),
+        if(!listo) Padding(padding:EdgeInsets.only(top:8), child:Text('Toca el mapa para marcar recogida y entrega + foto', style:TextStyle(color:Colors.white24, fontSize:9), textAlign:TextAlign.center))
+      ]))))] ) ); }
+}
+
+class PedidoVivoV2 extends StatefulWidget { final PedidoModel pedido; final List<LatLng> motos; PedidoVivoV2({required this.pedido, required this.motos}); @override State<PedidoVivoV2> createState()=> _PedidoVivoV2State(); }
+class _PedidoVivoV2State extends State<PedidoVivoV2> {
+  int vistos=0; Timer? t; late PedidoModel pedidoActual;
+  bool expiro(OfertaMoto o){ return DateTime.now().difference(o.fecha).inSeconds > 20; }
+  int segRestantes(OfertaMoto o){ return max(0, 20 - DateTime.now().difference(o.fecha).inSeconds); }
+
+  void confirmarCancelar(){
+    showDialog(context:context, builder:(ctx)=> AlertDialog(
+      backgroundColor:Color(0xFF1A1A1A),
+      title:Text('¿Cancelar viaje?', style:TextStyle(color:Colors.white, fontWeight:FontWeight.bold)),
+      content:Text('¿Estás seguro de cancelar el viaje? Se notificará al motorizado.', style:TextStyle(color:Colors.white70, fontSize:13)),
+      actions:[
+        TextButton(onPressed:()=> Navigator.pop(ctx), child:Text('NO, SEGUIR')),
+        ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Colors.redAccent), onPressed:(){
+          Navigator.pop(ctx);
+          PedidosService.cancelarPorCliente(pedidoActual.id);
+          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder:(context)=>ClienteMapaV2()), (r)=>false);
+        }, child:Text('SI, CANCELAR'))
+      ]
+    ));
+  }
+
+  @override void initState(){
+    super.initState();
+    pedidoActual=widget.pedido;
+    t=Timer.periodic(Duration(seconds:1),(timer){
+      PedidosService.cargar();
+      var p=PedidosService.activos.where((e)=>e.id==pedidoActual.id).toList();
+      var acept=PedidosService.getAceptado();
+      // Si motorizado aceptó directo, saltar automáticamente a Tracking sin botón
+      if(acept!=null && acept.id==pedidoActual.id && mounted){
+        t?.cancel();
+        Navigator.pushReplacement(context, MaterialPageRoute(builder:(context)=>TrackingVivo(recogida:acept.recogida, entrega:acept.entrega, pinCorrecto:acept.pin, esCliente:true, rutaReal:acept.rutaOSRM, precioFinal:acept.ofertaGanadora?.precio??acept.aceptadoSinOferta?.precio, motoInfo:acept.ofertaGanadora??acept.aceptadoSinOferta, pedidoId:acept.id)));
         return;
+      }
+      if(p.isNotEmpty){ setState(()=> pedidoActual=p.first); }
+      if(vistos<5) setState(()=>vistos++);
+    });
+  }
+
+  @override void dispose(){ t?.cancel(); super.dispose(); }
+
+  Widget tarjetaOferta(OfertaMoto o){
+    if(expiro(o)) return SizedBox.shrink();
+    return Container(
+      margin:EdgeInsets.only(bottom:12),
+      padding:EdgeInsets.all(14),
+      decoration:BoxDecoration(color:Color(0xFF1E1E1E),borderRadius:BorderRadius.circular(14),border:Border.all(color:Color(0xFF00FF88).withOpacity(0.6))),
+      child:Column(children:[
+        Row(mainAxisAlignment:MainAxisAlignment.spaceBetween, children:[
+          Column(crossAxisAlignment:CrossAxisAlignment.start, children:[
+            Text(o.motoNombre,style:TextStyle(color:Colors.white,fontWeight:FontWeight.bold)),
+            Text('${o.kmRecogida}km - ${o.tiempoRecogida}min',style:TextStyle(color:Colors.white38,fontSize:10)),
+          ]),
+          Row(children:[
+            Container(padding:EdgeInsets.symmetric(horizontal:8,vertical:4),decoration:BoxDecoration(color: segRestantes(o)<6? Colors.red : Colors.orange,borderRadius:BorderRadius.circular(12)),child:Text('${segRestantes(o)}s',style:TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.w900))),
+            SizedBox(width:8),
+            Text('\$${o.precio.toStringAsFixed(2)}',style:TextStyle(color:Color(0xFF00FF88),fontWeight:FontWeight.w900,fontSize:20))
+          ])
+        ]),
+        SizedBox(height:10),
+        Row(children:[
+          Expanded(child:OutlinedButton(style:OutlinedButton.styleFrom(side:BorderSide(color:Colors.white24)), onPressed:(){ setState((){ PedidosService.rechazarOferta(pedidoActual.id, o.motoNombre); pedidoActual.ofertas.removeWhere((e)=> e.motoNombre==o.motoNombre); }); }, child:Text('RECHAZAR', style:TextStyle(color:Colors.white54, fontSize:12)))),
+          SizedBox(width:8),
+          Expanded(flex:2, child:ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Color(0xFFD4AF37)), onPressed:(){ PedidosService.aceptarOferta(pedidoActual.id, o); Navigator.push(context, MaterialPageRoute(builder:(context)=>TrackingVivo(recogida:pedidoActual.recogida, entrega:pedidoActual.entrega, pinCorrecto:pedidoActual.pin, esCliente:true, rutaReal:pedidoActual.rutaOSRM, precioFinal:o.precio, motoInfo:o, pedidoId:pedidoActual.id))); }, child:Text('ACEPTAR \$${o.precio.toStringAsFixed(2)}',style:TextStyle(color:Colors.black,fontWeight:FontWeight.w900, fontSize:12)))),
+        ])
+      ])
+    );
+  }
+
+  @override Widget build(BuildContext context){
+    bool hayAceptadoSinOferta = pedidoActual.estado=='aceptado_sin_oferta' && pedidoActual.aceptadoSinOferta!=null;
+    bool puedeCancelar = (pedidoActual.estado=='pendiente' || pedidoActual.estado=='aceptado' || pedidoActual.estado=='aceptado_sin_oferta') && pedidoActual.estado!='en_camino';
+    bool yaRecogido = pedidoActual.estado=='en_camino';
+    return Scaffold(backgroundColor:Colors.black, appBar:AppBar(backgroundColor:Colors.black, title:Text('Pedido PIN ${pedidoActual.pin}',style:TextStyle(color:Colors.white,fontSize:14)), actions: puedeCancelar? [TextButton(onPressed:confirmarCancelar, child:Text('CANCELAR', style:TextStyle(color:Colors.redAccent)))] : null ), body:Column(children:[ Container(height:200, child:FlutterMap(options:MapOptions(initialCenter:pedidoActual.recogida,initialZoom:14), children:[TileLayer(urlTemplate:'https://tile.openstreetmap.org/{z}/{x}/{y}.png'), if(pedidoActual.rutaOSRM.isNotEmpty) PolylineLayer(polylines:[Polyline(points:pedidoActual.rutaOSRM,color:Color(0xFFD4AF37),strokeWidth:4)]), MarkerLayer(markers:[Marker(point:pedidoActual.recogida,width:40,height:40,child:Icon(Icons.location_on,color:Color(0xFFD4AF37),size:40)), Marker(point:pedidoActual.entrega,width:40,height:40,child:Icon(Icons.flag,color:Colors.red,size:36))])])), if(yaRecogido) Container(width:double.infinity, padding:EdgeInsets.all(10), color:Colors.orange.withOpacity(0.2), child:Text('✓ Recogida hecha - no se puede cancelar', style:TextStyle(color:Colors.orange, fontSize:11), textAlign:TextAlign.center)), Expanded(child:ListView(padding:EdgeInsets.all(12), children:[ if(hayAceptadoSinOferta) ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Color(0xFF00FF88)), onPressed:(){ Navigator.push(context, MaterialPageRoute(builder:(context)=>TrackingVivo(recogida:pedidoActual.recogida, entrega:pedidoActual.entrega, pinCorrecto:pedidoActual.pin, esCliente:true, rutaReal:pedidoActual.rutaOSRM, precioFinal:pedidoActual.aceptadoSinOferta!.precio, motoInfo:pedidoActual.aceptadoSinOferta, pedidoId:pedidoActual.id))); }, child:Text('VER MOTO EN MAPA', style:TextStyle(color:Colors.black))) else...[ if(pedidoActual.ofertas.isEmpty) Text('Esperando ofertas...',style:TextStyle(color:Colors.white54)) else...pedidoActual.ofertas.map((o)=> tarjetaOferta(o)).toList(), if(puedeCancelar) Padding(padding:EdgeInsets.only(top:16), child:SizedBox(width:double.infinity, child:OutlinedButton(style:OutlinedButton.styleFrom(side:BorderSide(color:Colors.redAccent)), onPressed:confirmarCancelar, child:Text('CANCELAR VIAJE', style:TextStyle(color:Colors.redAccent)))) ) ] ])) ])); }
+}
+
+class TrackingVivo extends StatefulWidget {
+  final LatLng recogida; final LatLng entrega; final String pinCorrecto;
+  final bool esCliente; final List<LatLng> rutaReal; final double? precioFinal;
+  final OfertaMoto? motoInfo; final String? pedidoId; final double saldoMoto;
+  TrackingVivo({required this.recogida, required this.entrega, required this.pinCorrecto, this.esCliente=true, this.rutaReal=const [], this.precioFinal, this.motoInfo, this.pedidoId, this.saldoMoto=3.50});
+  @override State<TrackingVivo> createState()=> _TrackingVivoState();
+}
+
+class _TrackingVivoState extends State<TrackingVivo> {
+  LatLng? motoPos; Timer? t; Timer? tCancel; Timer? tChat; Timer? tCalificar; int indiceRuta=0;
+  TextEditingController pinCtrl=TextEditingController(); TextEditingController chatCtrl=TextEditingController();
+  bool fotoEntrega=false; bool llego=false; XFile? fotoEntregaFile; final ImagePicker pickerEntrega = ImagePicker(); List<LatLng> rutaAnim=[]; List<MensajeChat> mensajes=[]; ScrollController scrollChat = ScrollController();
+  final mapCtrl = MapController();
+  late String pedidoIdActual;
+  List<String> rapidosMoto = ['Ya estoy afuera','Llego en 2 min','No encuentro la casa','Estoy en la puerta'];
+  List<String> rapidosCliente = ['Ya salgo','Estoy bajando','Te espero afuera','Aquí te espero'];
+  List<String> get rapidos => widget.esCliente? rapidosCliente : rapidosMoto;
+
+  void confirmarCancelarCliente(){
+    showDialog(context:context, builder:(ctx)=> AlertDialog(backgroundColor:Color(0xFF1A1A1A), title:Text('¿Cancelar viaje?', style:TextStyle(color:Colors.white)), content:Text('¿Estás seguro?', style:TextStyle(color:Colors.white70)), actions:[ TextButton(onPressed:()=> Navigator.pop(ctx), child:Text('NO')), ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Colors.redAccent), onPressed:(){ Navigator.pop(ctx); PedidosService.cancelarPorCliente(pedidoIdActual); Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder:(_)=>ClienteMapaV2()), (r)=>false); }, child:Text('SI')) ]));
+  }
+
+  @override void initState(){
+    super.initState();
+    pedidoIdActual = widget.pedidoId?? PedidosService.getAceptado()?.id?? DateTime.now().millisecondsSinceEpoch.toString();
+    rutaAnim = widget.rutaReal.isNotEmpty? widget.rutaReal : [widget.recogida, widget.entrega];
+    motoPos=rutaAnim.first;
+    mensajes = ChatService.getMensajes(pedidoIdActual);
+    SonidoService.pedirPermiso();
+    t=Timer.periodic(Duration(milliseconds:600),(_){
+      if(llego) return;
+      setState((){
+        indiceRuta++;
+        if(indiceRuta>=rutaAnim.length){
+          indiceRuta=rutaAnim.length-1; llego=true; t?.cancel();
+          if(widget.esCliente) SonidoService.notificar('🏁 MOTO LLEGÓ', 'Tu motorizado llegó al destino - PIN: ${widget.pinCorrecto}');
+        }
+        motoPos=rutaAnim[indiceRuta];
+      });
+    });
+    tChat = Timer.periodic(Duration(milliseconds:800),(_){ var nuevos = ChatService.getMensajes(pedidoIdActual); if(nuevos.length!=mensajes.length){ setState(()=> mensajes=nuevos); } });
+    if(!widget.esCliente){
+      tCancel = Timer.periodic(Duration(seconds:1),(_){ var cancel = PedidosService.getUltimoCancelado(); if(cancel!=null){ t?.cancel(); tCancel?.cancel(); tChat?.cancel(); if(mounted){ ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('⚠️ CLIENTE CANCELÓ'), backgroundColor:Colors.orange)); Future.delayed(Duration(seconds:2),(){ if(mounted) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder:(_)=>MotorizadoV2(saldo:widget.saldoMoto)), (r)=>false); }); } PedidosService.limpiarCancelado(); } });
+    }
+    if(widget.esCliente){
+      tCalificar = Timer.periodic(Duration(seconds:1),(_){
+        var aceptado = PedidosService.getAceptado();
+        if(aceptado==null && mounted){
+          tCalificar?.cancel(); t?.cancel(); tChat?.cancel(); tCancel?.cancel();
+          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder:(_)=>CalificarMotoCliente(moto: widget.motoInfo?? OfertaMoto(motoNombre:'Moto Wanki', precio:widget.precioFinal??0, tiempoEntrega:10, fecha:DateTime.now()), pedidoId:pedidoIdActual)), (r)=>false);
+        }
+      });
+    }
+  }
+
+   Future<void> tomarFotoEntrega() async {
+    try{
+      var f = await pickerEntrega.pickImage(source: ImageSource.camera, imageQuality: 70);
+      if(f!=null) setState((){ fotoEntregaFile=f; fotoEntrega=true; });
+    }catch(e){
+      var f = await pickerEntrega.pickImage(source: ImageSource.gallery, imageQuality: 70);
+      if(f!=null) setState((){ fotoEntregaFile=f; fotoEntrega=true; });
+    }
+  }
+
+  void enviarMensaje(){ if(chatCtrl.text.trim().isEmpty) return; ChatService.enviar(pedidoIdActual, widget.esCliente? 'cliente':'moto', chatCtrl.text.trim()); setState((){ mensajes = ChatService.getMensajes(pedidoIdActual); chatCtrl.clear(); }); }
+
+  void finalizar(){
+    if(pinCtrl.text!=widget.pinCorrecto){ ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('PIN incorrecto'),backgroundColor:Colors.red)); return; }
+    if(!fotoEntrega){ ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Falta foto'),backgroundColor:Colors.red)); return; }
+    var a=PedidosService.getAceptado();
+    if(a!=null){
+      var ranking = RankingService.getRanking();
+      var yo = ranking.firstWhere((m) => m.nombre.contains('Tu'), orElse: ()=> ranking[3]);
+      GananciasService.sumar(a.precioCliente, a.km, yo.comision);
+      PedidosService.quitar(a.id);
+    }
+    // YA NO USAMOS html.window - ESTO ERA LO QUE TE ROMPIA EL APK
+    ChatService.limpiar(pedidoIdActual);
+    Navigator.pushReplacement(context, MaterialPageRoute(builder:(_)=>EntregaExitosa(pin:widget.pinCorrecto, saldo:widget.saldoMoto)));
+  }
+
+  @override void dispose(){ t?.cancel(); tCancel?.cancel(); tChat?.cancel(); tCalificar?.cancel(); pinCtrl.dispose(); chatCtrl.dispose(); super.dispose(); }
+
+  Widget burbuja(MensajeChat m){ bool soyYo = (widget.esCliente && m.remitente=='cliente') || (!widget.esCliente && m.remitente=='moto'); return Align(alignment: soyYo? Alignment.centerRight : Alignment.centerLeft, child: Container(margin:EdgeInsets.symmetric(vertical:4), padding:EdgeInsets.symmetric(horizontal:12, vertical:8), decoration:BoxDecoration(color: soyYo? Color(0xFFD4AF37) : Color(0xFF2A2A2A), borderRadius: BorderRadius.circular(14)), child:Text(m.texto, style:TextStyle(color: soyYo? Colors.black : Colors.white, fontSize:12))));}
+
+    @override Widget build(BuildContext context){
+    bool esMoto =!widget.esCliente;
+    var pedidoActual = PedidosService.getAceptado();
+    bool yaEnCamino = pedidoActual?.estado=='en_camino';
+    String codigoRecogida = pedidoActual?.pinRecogidaMoto?? '----';
+
+    return Scaffold(backgroundColor:Colors.black,
+      appBar:AppBar(backgroundColor:Colors.black,
+        title: esMoto? Text('CODIGO RECOGIDA: $codigoRecogida',style:TextStyle(color:Color(0xFFD4AF37), fontSize:14, fontWeight:FontWeight.w900)) : Column(crossAxisAlignment:CrossAxisAlignment.start, children:[ Text('Moto en camino',style:TextStyle(color:Color(0xFFD4AF37), fontSize:14)), Text('PIN: ${widget.pinCorrecto}', style:TextStyle(color:Color(0xFF00FF88), fontSize:11, fontWeight:FontWeight.w900)) ]),
+        actions: esMoto &&!yaEnCamino? [TextButton(onPressed:(){
+          showDialog(context:context, builder:(ctx)=> AlertDialog(backgroundColor:Color(0xFF1A1A1A), title:Text('¿Cancelar?', style:TextStyle(color:Colors.white)), content:Text('El código $codigoRecogida quedará dado de baja.', style:TextStyle(color:Colors.white70)), actions:[ TextButton(onPressed:()=>Navigator.pop(ctx), child:Text('NO')), ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Colors.red), onPressed:(){ PedidosService.cancelarPorMoto(pedidoIdActual); Navigator.pop(ctx); Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder:(_)=>MotorizadoV2(saldo:widget.saldoMoto)), (r)=>false); }, child:Text('SI, CANCELAR')) ]));
+        }, child:Text('CANCELAR', style:TextStyle(color:Colors.redAccent)))] : widget.esCliente &&!yaEnCamino &&!llego? [TextButton(onPressed:confirmarCancelarCliente, child:Text('CANCELAR', style:TextStyle(color:Colors.redAccent)))] : null ),
+      body:Column(children:[
+        Expanded(flex:3, child:Stack(children:[
+          FlutterMap(mapController: mapCtrl, options:MapOptions(initialCenter:widget.recogida,initialZoom:14), children:[TileLayer(urlTemplate:'https://tile.openstreetmap.org/{z}/{x}/{y}.png'), MarkerLayer(markers:[Marker(point:widget.recogida,width:40,height:40,child:Icon(Icons.location_on,color:Color(0xFFD4AF37),size:40)), Marker(point:widget.entrega,width:40,height:40,child:Icon(Icons.flag,color:Colors.red,size:36)), if(motoPos!=null) Marker(point:motoPos!,width:50,height:50,child:Icon(Icons.motorcycle,color:Color(0xFF00FF88),size:36))])]),
+          Positioned(top:12, left:12, right:12, child:Container(padding:EdgeInsets.all(14), decoration:BoxDecoration(color:Color(0xFFD4AF37), borderRadius:BorderRadius.circular(14)), child:Column(children:[
+  Text(esMoto? 'MUESTRA ESTE CÓDIGO AL CLIENTE' : 'PIDE EL CÓDIGO AL MOTORIZADO: $codigoRecogida', style:TextStyle(color:Colors.black54, fontSize:9, fontWeight:FontWeight.bold)),
+  Text(codigoRecogida, style:TextStyle(color:Colors.black, fontSize:36, fontWeight:FontWeight.w900, letterSpacing:6)),
+  Text(esMoto? 'El cliente te lo pedirá para verificar' : 'El moto te debe mostrar este código', style:TextStyle(color:Colors.black87, fontSize:10, fontWeight:FontWeight.bold))
+]))),
+          Positioned(bottom:10, right:10, child:Column(children:[ FloatingActionButton.small(heroTag:'z1', backgroundColor:Colors.black, onPressed:(){ mapCtrl.move(mapCtrl.camera.center, mapCtrl.camera.zoom+1); }, child:Icon(Icons.add, color:Colors.white)), SizedBox(height:6), FloatingActionButton.small(heroTag:'z2', backgroundColor:Colors.black, onPressed:(){ mapCtrl.move(mapCtrl.camera.center, mapCtrl.camera.zoom-1); }, child:Icon(Icons.remove, color:Colors.white)) ]))
+        ])),
+        Expanded(flex:4, child:Container(color:Color(0xFF121212), child:Column(children:[
+          if(widget.esCliente && widget.motoInfo!=null) GestureDetector(onTap:(){ var coms=RatingService.porMoto(widget.motoInfo!.motoNombre); showModalBottomSheet(context:context, backgroundColor:Color(0xFF1A1A1A), builder:(_)=> Container(padding:EdgeInsets.all(16), child:Column(children:[ Text('COMENTARIOS DE ${widget.motoInfo!.motoNombre} (${coms.length})', style:TextStyle(color:Color(0xFFD4AF37), fontWeight:FontWeight.bold)), SizedBox(height:10), Expanded(child: coms.isEmpty? Center(child:Text('Sin comentarios aún', style:TextStyle(color:Colors.white24))) : ListView.builder(itemCount:coms.length, itemBuilder:(_,i){ var r=coms[i]; return ListTile(title:Text('${'⭐'*r.estrellas} ${r.cliente}', style:TextStyle(color:Colors.white, fontSize:12)), subtitle:Text(r.comentario, style:TextStyle(color:Colors.white70, fontSize:11))); })) ])) ); }, child: Container(padding:EdgeInsets.all(10), color:Color(0xFF1A1A1A), child:Row(children:[ CircleAvatar(radius:20, backgroundImage:NetworkImage(widget.motoInfo!.fotoPerfil)), SizedBox(width:10), Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start, children:[ Row(children:[ Text(widget.motoInfo!.motoNombre, style:TextStyle(color:Colors.white, fontSize:12, fontWeight:FontWeight.bold)), SizedBox(width:5), Icon(Icons.chat, size:12, color:Color(0xFFD4AF37)) ]), Text('Placa ${widget.motoInfo!.placa} • Toca para ver comentarios', style:TextStyle(color:Colors.white38, fontSize:9)) ])), Container(padding:EdgeInsets.symmetric(horizontal:8,vertical:4), decoration:BoxDecoration(color:Color(0xFF00FF88).withOpacity(0.2), borderRadius:BorderRadius.circular(20)), child:Text('VER COMENTARIOS', style:TextStyle(color:Color(0xFF00FF88), fontSize:7))) ]))),
+          Container(padding:EdgeInsets.all(10), color:Colors.black, child:Row(children:[ Icon(Icons.chat_bubble, color:Color(0xFF00FF88), size:14), SizedBox(width:6), Text('CHAT ${mensajes.length}', style:TextStyle(color:Color(0xFF00FF88), fontSize:10)), Spacer(), if(widget.esCliente) Container(padding:EdgeInsets.symmetric(horizontal:10,vertical:4), decoration:BoxDecoration(color:Color(0xFFD4AF37), borderRadius:BorderRadius.circular(20)), child:Text('PIN: ${widget.pinCorrecto}', style:TextStyle(color:Colors.black, fontSize:12, fontWeight:FontWeight.w900))) ])),
+          Expanded(child:ListView.builder(controller: scrollChat, padding:EdgeInsets.all(10), itemCount: mensajes.length, itemBuilder:(_,i)=> burbuja(mensajes[i]))),
+          Container(height:38, color:Colors.black, child:ListView(scrollDirection:Axis.horizontal, padding:EdgeInsets.symmetric(horizontal:8), children: rapidos.map((t)=> Padding(padding:EdgeInsets.only(right:6), child:ActionChip(label:Text(t,style:TextStyle(fontSize:11)), backgroundColor:Color(0xFF1E1E1E), labelStyle:TextStyle(color:Colors.white70), onPressed:(){ chatCtrl.text=t; enviarMensaje(); })) ).toList())),
+          Container(padding:EdgeInsets.all(8), color:Colors.black, child:Row(children:[ Expanded(child:TextField(controller: chatCtrl, style:TextStyle(color:Colors.white, fontSize:13), decoration:InputDecoration(hintText: 'Escribe...', filled:true, fillColor:Color(0xFF1E1E1E), border:OutlineInputBorder(borderRadius:BorderRadius.circular(20), borderSide:BorderSide.none)), onSubmitted:(_)=> enviarMensaje())), SizedBox(width:8), GestureDetector(onTap: enviarMensaje, child:Container(padding:EdgeInsets.all(10), decoration:BoxDecoration(color:Color(0xFFD4AF37), shape:BoxShape.circle), child:Icon(Icons.send, color:Colors.black, size:18))) ])),
+          if(esMoto &&!llego &&!yaEnCamino) SizedBox(width:double.infinity, child:ElevatedButton.icon(style:ElevatedButton.styleFrom(backgroundColor:Color(0xFF00FF88)), icon:Icon(Icons.inventory_2), label:Text('YA RECOGÍ - $codigoRecogida'), onPressed:(){ var acept = PedidosService.getAceptado(); if(acept!=null){
+  PedidosService.marcarRecogido(acept.id);
+  ChatService.enviar(pedidoIdActual, 'moto', '✅ Ya recogí con código $codigoRecogida');
+  SonidoService.notificar('📦 PAQUETE RECOGIDO', 'Moto recogió tu encomienda - $codigoRecogida');
+  setState((){});
+} })),
+          if(llego && esMoto) Container(padding:EdgeInsets.all(10), color:Color(0xFF1A1A1A), child:Column(children:[ Row(children:[ Expanded(child:TextField(controller:pinCtrl,keyboardType:TextInputType.number,maxLength:4, style:TextStyle(color:Colors.black, fontWeight:FontWeight.w900, letterSpacing:4), textAlign:TextAlign.center, decoration:InputDecoration(counterText:"", filled:true,fillColor:Colors.white,hintText:'PIN CLIENTE', border:OutlineInputBorder(borderRadius:BorderRadius.circular(10))))), SizedBox(width:8), GestureDetector(onTap: tomarFotoEntrega, child:Container(padding:EdgeInsets.all(12),decoration:BoxDecoration(color:fotoEntrega?Color(0xFF00FF88):Colors.white24,borderRadius:BorderRadius.circular(10)), child:Column(children:[ Icon(fotoEntrega? Icons.check_circle : Icons.camera_alt, color:fotoEntrega? Colors.black : Colors.white), if(fotoEntrega) Text(fotoEntregaFile!.name, style:TextStyle(fontSize:6)) ]))) ]), SizedBox(height:8), SizedBox(width:double.infinity, child:ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Color(0xFF00FF88)),onPressed:finalizar,child:Text('FINALIZAR ENTREGA CON FOTO')))])),
+          if(llego &&!esMoto) Container(width:double.infinity, padding:EdgeInsets.all(12), color:Color(0xFFD4AF37).withOpacity(0.15), child:Column(children:[ Text('¡Tu moto llegó!', style:TextStyle(color:Colors.white, fontSize:12)), Text(widget.pinCorrecto, style:TextStyle(color:Color(0xFFD4AF37), fontSize:36, fontWeight:FontWeight.w900, letterSpacing:8)) ]))
+        ])))
+      ])
+    );
+  }
+}
+class CalificarMotoCliente extends StatefulWidget {
+  final OfertaMoto moto; final String pedidoId;
+  CalificarMotoCliente({required this.moto, required this.pedidoId});
+  @override State<CalificarMotoCliente> createState()=> _CalificarMotoClienteState();
+}
+class _CalificarMotoClienteState extends State<CalificarMotoCliente> {
+  int estrellas=5; 
+  TextEditingController comentarioCtrl=TextEditingController();
+  List<String> frases5 = [
+    '¡GRACIAS MIJIN!',
+    '¡GRACIAS MIJINA!',
+    '¡GRACIAS VECI!',
+    '¡GRACIAS ÑAÑO!',
+    '¡GRACIAS ÑAÑA!',
+    '¡QUÉ BESTIA, GRACIAS!',
+    '¡ERES UN CRACK, QUE BACÁN!',
+    '¡DE UNA, GRACIAS MI PANA!',
+    '¡QUÉ BACÁN, GRACIAS!',
+    '¡GRACIAS REY / REINA!',
+  ];
+  @override void initState(){ super.initState(); RatingService.cargar(); }
+
+  void enviar(){
+    String fraseFinal = '';
+    if(estrellas==5){
+      frases5.shuffle();
+      fraseFinal = frases5.first;
+    } else if(estrellas==4){
+      fraseFinal = '¡Gracias veci, casi perfecto!';
+    } else {
+      fraseFinal = 'Gracias ñaño, seguiremos mejorando';
     }
 
-    mostrarEstadoPedido(data);
+    RatingService.agregar(RatingModel(motoNombre:widget.moto.motoNombre, estrellas:estrellas, comentario:comentarioCtrl.text.trim(), cliente:'Tú', fecha:DateTime.now()));
 
-    // Actualización automática del estado
-    if (window.canalRastreo) {
-        window.canalRastreo.unsubscribe();
+    showDialog(context: context, barrierDismissible: false, builder: (ctx)=> Dialog(
+      backgroundColor: Color(0xFF1A1A1A),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(padding: EdgeInsets.all(20), child: Column(mainAxisSize: MainAxisSize.min, children:[
+        Icon(Icons.celebration, color: Color(0xFFD4AF37), size: 60),
+        SizedBox(height:12),
+        Text(fraseFinal, style:TextStyle(color:Color(0xFFD4AF37), fontSize:22, fontWeight:FontWeight.w900), textAlign:TextAlign.center),
+        SizedBox(height:8),
+        if(estrellas==5) Text('+20 pts Wanki para tu motorizado', style:TextStyle(color:Color(0xFF00FF88), fontSize:12, fontWeight:FontWeight.bold)),
+        SizedBox(height:16),
+        SizedBox(width:double.infinity, child:ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Color(0xFFD4AF37)), onPressed:(){
+          Navigator.pop(ctx);
+          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder:(_)=>HomeWanki()), (r)=>false);
+        }, child:Text('¡DE UNA!', style:TextStyle(color:Colors.black, fontWeight:FontWeight.w900))))
+      ]))
+    ));
+  }
+
+  @override Widget build(BuildContext context){
+    var ratings = RatingService.porMoto(widget.moto.motoNombre);
+    return Scaffold(backgroundColor:Colors.black, body:SingleChildScrollView(padding:EdgeInsets.all(20), child:Column(children:[
+      SizedBox(height:40),
+      Icon(Icons.favorite, color:Color(0xFFD4AF37), size:60), SizedBox(height:10),
+      Text('¡GRACIAS POR USAR WANKI!', style:TextStyle(color:Color(0xFFD4AF37), fontSize:18, fontWeight:FontWeight.w900), textAlign:TextAlign.center),
+      Text('Tu pedido fue entregado con éxito', style:TextStyle(color:Colors.white38, fontSize:12)),
+      SizedBox(height:20),
+      Container(padding:EdgeInsets.all(16), decoration:BoxDecoration(color:Color(0xFF1A1A1A), borderRadius:BorderRadius.circular(16)), child:Row(children:[
+        CircleAvatar(radius:30, backgroundImage:NetworkImage(widget.moto.fotoPerfil)),
+        SizedBox(width:12),
+        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start, children:[
+          Text(widget.moto.motoNombre, style:TextStyle(color:Colors.white, fontWeight:FontWeight.bold, fontSize:14)),
+          Text('Placa: ${widget.moto.placa} • ${widget.moto.viajes} viajes', style:TextStyle(color:Colors.white38, fontSize:10)),
+          Row(children:[ Icon(Icons.star, color:Color(0xFFD4AF37), size:14), Text(' ${widget.moto.rating} • ${widget.moto.puntos} pts', style:TextStyle(color:Colors.white70, fontSize:11)) ])
+        ]))
+      ])),
+      SizedBox(height:20),
+      Text('Califica a tu motorizado', style:TextStyle(color:Colors.white, fontSize:14, fontWeight:FontWeight.bold)),
+      SizedBox(height:10),
+      Row(mainAxisAlignment:MainAxisAlignment.center, children: List.generate(5, (i)=> GestureDetector(onTap:()=>setState(()=> estrellas=i+1), child:Icon(i<estrellas? Icons.star : Icons.star_border, color:Color(0xFFD4AF37), size:40)))),
+      SizedBox(height:12),
+      Text('$estrellas ${estrellas==1? 'estrella' : 'estrellas'}', style:TextStyle(color:Color(0xFFD4AF37), fontWeight:FontWeight.bold)),
+      SizedBox(height:16),
+      TextField(controller:comentarioCtrl, maxLines:3, style:TextStyle(color:Colors.white), decoration:InputDecoration(hintText:'Deja un comentario...', hintStyle:TextStyle(color:Colors.white24), filled:true, fillColor:Color(0xFF1A1A1A), border:OutlineInputBorder(borderRadius:BorderRadius.circular(12), borderSide:BorderSide.none))),
+      SizedBox(height:16),
+      SizedBox(width:double.infinity, child:ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Color(0xFFD4AF37), padding:EdgeInsets.symmetric(vertical:14)), onPressed:enviar, child:Text('ENVIAR CALIFICACIÓN', style:TextStyle(color:Colors.black, fontWeight:FontWeight.w900)))),
+    ]))
+    );
+  }
+}
+
+class EntregaExitosa extends StatelessWidget {
+  final String pin; final double saldo;
+  EntregaExitosa({required this.pin, this.saldo=3.20});
+  @override Widget build(BuildContext context){
+    return Scaffold(backgroundColor:Colors.black, body:Center(child:Padding(padding:EdgeInsets.all(24), child:Column(mainAxisAlignment:MainAxisAlignment.center, children:[ Icon(Icons.verified,color:Color(0xFF00FF88),size:100), SizedBox(height:20), Text('ENTREGA VERIFICADA',style:TextStyle(color:Color(0xFF00FF88),fontSize:22,fontWeight:FontWeight.w900)), Text('PIN $pin confirmado', style:TextStyle(color:Colors.white38, fontSize:12)), SizedBox(height:30), SizedBox(width:double.infinity, child:ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Color(0xFFD4AF37),padding:EdgeInsets.symmetric(vertical:16)), onPressed:(){ Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder:(_)=>MotorizadoV2(saldo:saldo)),(r)=>false); }, child:Text('VER MÁS PEDIDOS', style:TextStyle(color:Colors.black, fontWeight:FontWeight.w900))))]))));
+  }
+}
+
+class MotorizadoV2 extends StatefulWidget {
+  final double saldo;
+  MotorizadoV2({required this.saldo});
+  @override State<MotorizadoV2> createState()=> _MotorizadoV2State();
+}
+
+class _MotorizadoV2State extends State<MotorizadoV2> with SingleTickerProviderStateMixin {
+  late double saldo; Timer? timerRefresh; TextEditingController ofertaCtrl=TextEditingController();
+  LatLng? miPos; String miDireccion="Obteniendo ubicación...";
+  Map<String,String> dirRecogidaCache={}; Map<String,String> dirEntregaCache={};
+  Set<String> pedidosRechazados={};
+  late AnimationController _animController;
+  double filtroKm = 3.0; // CAMBIA AQUÍ SI QUIERES 5KM
+
+  void cargarRechazados(){ try{ var raw = html.window.localStorage['wanki_rechazados_moto99']; if(raw!=null){ var list = jsonDecode(raw) as List; pedidosRechazados = list.map((e)=> e.toString()).toSet(); } }catch(_){} }
+  void guardarRechazados(){ try{ html.window.localStorage['wanki_rechazados_moto99'] = jsonEncode(pedidosRechazados.toList()); }catch(_){} }
+  void rechazarPedido(PedidoModel p){ setState((){ pedidosRechazados.add(p.id); guardarRechazados(); }); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Pedido #${p.pin} rechazado'), backgroundColor:Colors.white24, duration:Duration(seconds:1))); }
+
+  Future<void> _obtenerMiUbicacion() async { try{ html.window.navigator.geolocation.getCurrentPosition().then((pos) async { var c = pos.coords; miPos = LatLng(c!.latitude!.toDouble(), c.longitude!.toDouble()); _reverseMiPos(miPos!); setState((){}); }); }catch(_){ miPos = LatLng(-0.180653, -78.467838); } }
+  Future<void> _reverseMiPos(LatLng p) async { try{ var url='https://nominatim.openstreetmap.org/reverse?format=json&lat=${p.latitude}&lon=${p.longitude}&zoom=18'; var res= await http.get(Uri.parse(url), headers:{'User-Agent':'WankiApp'}); if(res.statusCode==200){ var data=jsonDecode(res.body); setState(()=> miDireccion=data['display_name']??'Mi ubicación'); } }catch(_){} }
+  Future<String> _getDireccion(LatLng p, bool esRecogida, String pedidoId) async {
+    if(esRecogida && dirRecogidaCache.containsKey(pedidoId)) return dirRecogidaCache[pedidoId]!;
+    if(!esRecogida && dirEntregaCache.containsKey(pedidoId)) return dirEntregaCache[pedidoId]!;
+    try{ var url='https://nominatim.openstreetmap.org/reverse?format=json&lat=${p.latitude}&lon=${p.longitude}&zoom=18'; var res= await http.get(Uri.parse(url), headers:{'User-Agent':'WankiApp'}); if(res.statusCode==200){ var data=jsonDecode(res.body); String dir=data['display_name']??"${p.latitude.toStringAsFixed(5)}, ${p.longitude.toStringAsFixed(5)}"; setState((){ if(esRecogida) dirRecogidaCache[pedidoId]=dir; else dirEntregaCache[pedidoId]=dir; }); return dir; } }catch(_){}
+    return "${p.latitude.toStringAsFixed(5)}, ${p.longitude.toStringAsFixed(5)}";
+  }
+  double _calcKm(LatLng a, LatLng b){ const Distance d=Distance(); return d(a,b)/1000; }
+  @override void dispose(){ _animController.dispose(); timerRefresh?.cancel(); ofertaCtrl.dispose(); super.dispose(); }
+
+  @override void initState(){
+    super.initState();
+    SonidoService.init(); cargarRechazados(); SonidoService.pedirPermiso(); saldo=widget.saldo;
+    PedidosService.cargar();
+    try{ var viejo = PedidosService.getAceptado(); if(viejo!=null && DateTime.now().difference(viejo.fecha).inHours > 2){ PedidosService.quitar(viejo.id); html.window.localStorage.remove('wanki_aceptados_v3'); } }catch(_){}
+    var preAceptado = PedidosService.getAceptado();
+    if(preAceptado!=null && (preAceptado.estado=='aceptado' || preAceptado.estado=='en_camino' || preAceptado.estado=='aceptado_sin_oferta')){
+      bool existe = PedidosService.activos.any((e)=> e.id==preAceptado!.id);
+      if(existe){
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder:(_)=>TrackingVivo(recogida:preAceptado.recogida, entrega:preAceptado.entrega, pinCorrecto:preAceptado.pin, esCliente:false, rutaReal:preAceptado.rutaOSRM.isNotEmpty? preAceptado.rutaOSRM : [preAceptado.recogida, preAceptado.entrega], precioFinal:preAceptado.ofertaGanadora!.precio, motoInfo:preAceptado.ofertaGanadora, pedidoId:preAceptado.id, saldoMoto:saldo)), (r)=>false);
+        });
+        return;
+      } else { html.window.localStorage.remove('wanki_aceptados_v3'); }
     }
+    _obtenerMiUbicacion();
+    _animController = AnimationController(vsync: this, duration: Duration(milliseconds:1000))..repeat(reverse:true);
+    timerRefresh=Timer.periodic(Duration(seconds:2),(timer){
+      int antes = PedidosService.getPendientesValidos(pedidosRechazados).length;
+      PedidosService.cargar();
+      var aceptado = PedidosService.getAceptado();
+      if(aceptado!=null && aceptado.ofertaGanadora!=null && aceptado.ofertaGanadora!.motoNombre.contains('Tu')){
+        timerRefresh?.cancel();
+        if(mounted){
+          SonidoService.notificar('🏆 ¡OFERTA ACEPTADA!', 'Cliente aceptó \$${aceptado.ofertaGanadora!.precio}');
+          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder:(_)=>TrackingVivo(recogida:aceptado.recogida, entrega:aceptado.entrega, pinCorrecto:aceptado.pin, esCliente:false, rutaReal:aceptado.rutaOSRM.isNotEmpty? aceptado.rutaOSRM : [aceptado.recogida, aceptado.entrega], precioFinal:aceptado.ofertaGanadora!.precio, motoInfo:aceptado.ofertaGanadora, pedidoId:aceptado.id, saldoMoto:saldo)), (r)=>false);
+        }
+        return;
+      }
+      int ahora = PedidosService.getPendientesValidos(pedidosRechazados).length;
+      if(ahora > antes){ SonidoService.notificar('🔔 NUEVO PEDIDO WANKI', 'Hay $ahora pedidos'); }
+      var cancel = PedidosService.getUltimoCancelado();
+      if(cancel!=null){ SonidoService.notificar('⚠️ PEDIDO CANCELADO', 'Cliente canceló'); PedidosService.limpiarCancelado(); }
+      if(mounted) setState((){});
+    });
+  }
 
-    window.canalRastreo = db
-        .channel('rastreo-' + id)
-        .on(
-            'postgres_changes',
-            {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'pedidos',
-                filter: 'id=eq.' + id
-            },
-            payload => {
-                console.log('🔄 ESTADO ACTUALIZADO:', payload.new);
-                mostrarEstadoPedido(payload.new);
-            }
+  void aceptarDirecto(PedidoModel p){
+    var ranking = RankingService.getRanking();
+    var yo = ranking.firstWhere((m) => m.nombre.contains('Tu'), orElse: ()=> ranking[3]);
+    double comisionNecesaria = p.precioCliente * (yo.comision / 100);
+
+    if(SaldoPrepagoService.getSaldo() < comisionNecesaria){
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Saldo insuficiente. Tienes \$${SaldoPrepagoService.getSaldo().toStringAsFixed(2)} y necesitas \$${comisionNecesaria.toStringAsFixed(2)}'),backgroundColor:Colors.red));
+      Navigator.push(context, MaterialPageRoute(builder:(_)=>PantallaRecargaMoto()));
+      return;
+    }
+    // Descontamos la comisión AHORA
+    SaldoPrepagoService.descontarComision(p.precioCliente, yo.comision);
+
+    timerRefresh?.cancel();
+    double kmMoto = miPos!=null? _calcKm(miPos!, p.recogida) : 0.8 + Random().nextDouble()*2.0; int tMoto = (kmMoto*3+1).round();
+    var datosMiMoto = MotoAuthService.getMoto();
+    var moto = OfertaMoto(motoNombre: datosMiMoto['nombre'] ?? 'Moto 99 - Tu', precio:p.precioCliente, tiempoEntrega:p.tiempo, fecha:DateTime.now(), kmRecogida:double.parse(kmMoto.toStringAsFixed(2)), tiempoRecogida:tMoto, fotoPerfil:'https://i.pravatar.cc/150?img=8', placa: datosMiMoto['placa'] ?? 'WANKI-99', rating:4.7, viajes:127, puntos:450);
+    PedidosService.aceptarSinOferta(p.id, moto);
+    ChatService.enviar(p.id, 'moto', 'Acepté! Código recogida: ${PedidosService.getAceptado()?.pinRecogidaMoto}');
+    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder:(context)=>TrackingVivo(recogida:p.recogida, entrega:p.entrega, pinCorrecto:p.pin, esCliente:false, rutaReal:p.rutaOSRM.isNotEmpty? p.rutaOSRM : [p.recogida, p.entrega], precioFinal:p.precioCliente, motoInfo:moto, pedidoId:p.id, saldoMoto:saldo)), (r)=>false);
+  }
+  void mostrarOfertar(PedidoModel p){ ofertaCtrl.text = p.precioCliente.toStringAsFixed(2); showDialog(context:context, builder:(ctx)=> AlertDialog(backgroundColor:Color(0xFF1A1A1A), title:Text('Ofertar',style:TextStyle(color:Colors.white)), content:TextField(controller:ofertaCtrl, keyboardType:TextInputType.numberWithOptions(decimal:true), style:TextStyle(color:Colors.white), decoration:InputDecoration(labelText:'Tu oferta \$', filled:true, fillColor:Colors.black, border:OutlineInputBorder())), actions:[ TextButton(onPressed:()=>Navigator.pop(ctx), child:Text('Cancelar')), ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Color(0xFFD4AF37)), onPressed:(){ double? val = double.tryParse(ofertaCtrl.text); if(val==null) return; double kmMoto = miPos!=null? _calcKm(miPos!, p.recogida) : 0.8; int tMoto = (kmMoto*3+1).round(); var of = OfertaMoto(motoNombre:'Moto 99 - Tu', precio:val, tiempoEntrega: p.tiempo+Random().nextInt(4), fecha:DateTime.now(), kmRecogida:double.parse(kmMoto.toStringAsFixed(2)), tiempoRecogida:tMoto, fotoPerfil:'https://i.pravatar.cc/150?img=8', placa:'WANKI-99', rating:4.7, viajes:127, puntos:450); PedidosService.agregarOferta(p.id, of); Navigator.pop(ctx); setState(()=> PedidosService.cargar()); }, child:Text('ENVIAR')) ])); }
+  Widget _infoRow(IconData ic, String label, String value){ return Padding(padding:EdgeInsets.only(bottom:6), child:Row(crossAxisAlignment:CrossAxisAlignment.start, children:[ Icon(ic, color:Color(0xFFD4AF37), size:14), SizedBox(width:6), Expanded(child:RichText(text:TextSpan(children:[ TextSpan(text:'$label: ', style:TextStyle(color:Colors.white38, fontSize:11, fontWeight:FontWeight.bold)), TextSpan(text:value, style:TextStyle(color:Colors.white, fontSize:11)) ])) )])); }
+
+  @override Widget build(BuildContext context){
+    var todosPendientes = PedidosService.getPendientesValidos(pedidosRechazados);
+    // FILTRO 3KM
+    var pendientes = todosPendientes.where((p){
+      if(miPos==null) return true;
+      double dist = _calcKm(miPos!, p.recogida);
+      return dist <= filtroKm;
+    }).toList();
+
+    var ranking = RankingService.getRanking();
+    var yo = ranking.firstWhere((m) => m.nombre.contains('Tu'), orElse: ()=> ranking[3]);
+    int miPuesto = ranking.indexOf(yo)+1;
+    var ganancias = GananciasService.hoy();
+
+    return Scaffold(backgroundColor:Colors.black,
+      appBar:AppBar(backgroundColor:Colors.black, 
+        title:Column(crossAxisAlignment:CrossAxisAlignment.start, children:[
+          Row(children:[
+          GestureDetector(onTap:(){ Navigator.push(context, MaterialPageRoute(builder:(_)=>PantallaRecargaMoto())); }, child: Container(padding:EdgeInsets.symmetric(horizontal:10,vertical:4), decoration:BoxDecoration(color: SaldoPrepagoService.getSaldo() < 1? Colors.red.withOpacity(0.15) : Color(0xFF00FF88).withOpacity(0.15), borderRadius:BorderRadius.circular(20), border: Border.all(color:SaldoPrepagoService.getSaldo() < 1? Colors.red : Color(0xFF00FF88))), child:Text('Saldo: \$${SaldoPrepagoService.getSaldo().toStringAsFixed(2)} • RECARGAR',style:TextStyle(color:SaldoPrepagoService.getSaldo() < 1? Colors.redAccent : Color(0xFF00FF88), fontSize:12, fontWeight:FontWeight.w900)))),
+          SizedBox(width:8),
+          ScaleTransition(scale: Tween(begin:1.0,end:1.08).animate(CurvedAnimation(parent:_animController, curve:Curves.easeInOut)), child: GestureDetector(onTap:(){ Navigator.push(context, MaterialPageRoute(builder:(_)=> PantallaRanking())); }, child: Container(padding:EdgeInsets.symmetric(horizontal:10,vertical:5), decoration:BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFD4AF37), Color(0xFFFFD700)]), borderRadius:BorderRadius.circular(20)), child:Text('🏆 #${miPuesto} = ${yo.comision}%', style:TextStyle(color:Colors.black, fontSize:9, fontWeight:FontWeight.w900)))) ),
+          ]),
+          Text(miDireccion, style:TextStyle(color:Colors.white38, fontSize:9), maxLines:1, overflow:TextOverflow.ellipsis)
+        ]),
+        actions: [
+          PopupMenuButton<double>(icon:Icon(Icons.filter_list, color:Colors.white54), onSelected:(v){ setState(()=> filtroKm=v); }, itemBuilder:(_)=> [PopupMenuItem(value:1.0, child:Text('1km')), PopupMenuItem(value:3.0, child:Text('3km (recomendado)')), PopupMenuItem(value:5.0, child:Text('5km')), PopupMenuItem(value:20.0, child:Text('Todos'))])
+        ]
+      ),
+      body: Column(children: [
+        // GANANCIAS DEL DÍA
+        Container(margin:EdgeInsets.fromLTRB(12,6,12,0), padding:EdgeInsets.all(12), decoration:BoxDecoration(color:Color(0xFF0F0F0F), borderRadius:BorderRadius.circular(14), border:Border.all(color:Color(0xFF00FF88).withOpacity(0.3))), child:Row(mainAxisAlignment:MainAxisAlignment.spaceAround, children:[
+          Column(children:[ Text('HOY', style:TextStyle(color:Colors.white38, fontSize:8)), Text('\$${ganancias['total'].toStringAsFixed(2)}', style:TextStyle(color:Color(0xFF00FF88), fontSize:18, fontWeight:FontWeight.w900)) ]),
+          Container(width:1, height:30, color:Colors.white10),
+          Column(children:[ Text('${ganancias['viajes']} VIAJES', style:TextStyle(color:Colors.white38, fontSize:8)), Text('${ganancias['km'].toStringAsFixed(1)} km', style:TextStyle(color:Colors.white, fontSize:14, fontWeight:FontWeight.bold)) ]),
+          Container(width:1, height:30, color:Colors.white10),
+          Column(children:[ Text('FILTRO', style:TextStyle(color:Colors.white38, fontSize:8)), Text('${filtroKm.toInt()} km', style:TextStyle(color:Color(0xFFD4AF37), fontSize:14, fontWeight:FontWeight.bold)) ]),
+        ])),
+        Container(margin:EdgeInsets.all(12), padding:EdgeInsets.all(14), decoration:BoxDecoration(gradient:LinearGradient(colors:[Color(0xFF1A1A1A), Color(0xFF0F0F0F)]), borderRadius:BorderRadius.circular(16), border:Border.all(color:Color(0xFFD4AF37).withOpacity(0.3))), child:Row(children:[ Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start, children:[ Text('TU COMISIÓN', style:TextStyle(color:Colors.white38, fontSize:8, letterSpacing:2)), Row(children:[Text('${yo.comision}%', style:TextStyle(color:Colors.white, fontSize:28, fontWeight:FontWeight.w900)), SizedBox(width:8), if(miPuesto!=1) Container(padding:EdgeInsets.symmetric(horizontal:6,vertical:2), decoration:BoxDecoration(color:Colors.red.withOpacity(0.2), borderRadius:BorderRadius.circular(6)), child:Text('PAGAS +${(yo.comision-8.1).toStringAsFixed(1)}%', style:TextStyle(color:Colors.redAccent, fontSize:9, fontWeight:FontWeight.bold)))]), Text('Top #1 paga 8.1% • Ahorro \$${(100*(yo.comision-8.1)/100).toStringAsFixed(2)} x \$100', style:TextStyle(color:Color(0xFF00FF88), fontSize:9, fontWeight:FontWeight.bold)), ])), Column(children:[ Text('${yo.puntos} PTS', style:TextStyle(color:Color(0xFFD4AF37), fontWeight:FontWeight.w900)), Text('FALTAN ${980-yo.puntos}', style:TextStyle(color:Colors.white38, fontSize:8)), SizedBox(height:6), Container(padding:EdgeInsets.symmetric(horizontal:8,vertical:4), decoration:BoxDecoration(color:Color(0xFFD4AF37), borderRadius:BorderRadius.circular(20)), child:Text('#$miPuesto', style:TextStyle(color:Colors.black, fontWeight:FontWeight.w900, fontSize:12))) ]) ])),
+        if(pendientes.isEmpty) Expanded(child:Center(child:Column(mainAxisAlignment:MainAxisAlignment.center, children:[Icon(Icons.check_circle, color:Color(0xFF00FF88), size:50), SizedBox(height:10), Text(todosPendientes.isEmpty? 'No hay pedidos cerca' : 'No hay pedidos a menos de ${filtroKm.toInt()}km', style:TextStyle(color:Colors.white38)), Text(todosPendientes.isEmpty? '' : '${todosPendientes.length} pedidos fuera de tu filtro', style:TextStyle(color:Color(0xFFD4AF37), fontSize:11))])))
+        else Expanded(child:ListView.builder(padding:EdgeInsets.symmetric(horizontal:12), itemCount:pendientes.length, itemBuilder:(c,i){
+          var p=pendientes[i]; double kmARecogida = miPos!=null? _calcKm(miPos!, p.recogida) : 0; int minARecogida = (kmARecogida*3+1).round(); if(!dirRecogidaCache.containsKey(p.id)) _getDireccion(p.recogida, true, p.id); if(!dirEntregaCache.containsKey(p.id)) _getDireccion(p.entrega, false, p.id);
+          return Container(margin:EdgeInsets.only(bottom:14),padding:EdgeInsets.all(14),decoration:BoxDecoration(color:Color(0xFF1A1A1A),borderRadius:BorderRadius.circular(16), border:Border.all(color:Color(0xFF2A2A2A))), child:Column(crossAxisAlignment:CrossAxisAlignment.start, children:[
+            Row(mainAxisAlignment:MainAxisAlignment.spaceBetween, children:[ Text('PEDIDO #${p.pin}',style:TextStyle(color:Color(0xFFD4AF37),fontWeight:FontWeight.w900, fontSize:12)), Row(children:[ Container(padding:EdgeInsets.symmetric(horizontal:6,vertical:2), decoration:BoxDecoration(color:Color(0xFFD4AF37).withOpacity(0.2), borderRadius:BorderRadius.circular(6)), child:Text('${kmARecogida.toStringAsFixed(1)}km de ti', style:TextStyle(color:Color(0xFFD4AF37), fontSize:9, fontWeight:FontWeight.bold))), SizedBox(width:6), Container(padding:EdgeInsets.symmetric(horizontal:8,vertical:4), decoration:BoxDecoration(color:Color(0xFF00FF88).withOpacity(0.2), borderRadius:BorderRadius.circular(8)), child:Text('\$${p.precioCliente.toStringAsFixed(2)}', style:TextStyle(color:Color(0xFF00FF88), fontWeight:FontWeight.w900, fontSize:14))) ]) ]),
+            SizedBox(height:8),
+            Container(padding:EdgeInsets.all(10), decoration:BoxDecoration(color:Colors.black, borderRadius:BorderRadius.circular(12), border:Border.all(color:Color(0xFF00FF88).withOpacity(0.3))), child:Row(children:[ CircleAvatar(radius:22, backgroundImage:NetworkImage(p.clienteFoto)), SizedBox(width:10), Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start, children:[ Text(p.clienteNombre, style:TextStyle(color:Colors.white, fontWeight:FontWeight.w900, fontSize:12)), Text(p.descripcionPaquete, style:TextStyle(color:Color(0xFFD4AF37), fontSize:11, fontWeight:FontWeight.bold)), Row(children:[ Icon(p.tieneFotoPaquete? Icons.verified : Icons.warning, color:p.tieneFotoPaquete? Color(0xFF00FF88): Colors.orange, size:12), SizedBox(width:4), Text(p.tieneFotoPaquete? 'Con foto ✓' : 'Sin foto', style:TextStyle(color: p.tieneFotoPaquete? Color(0xFF00FF88): Colors.orange, fontSize:9)) ]), ])), ])),
+            if(p.tieneFotoPaquete && p.fotoPaqueteBase64.isNotEmpty) GestureDetector(onTap:(){ showDialog(context:context, builder:(_)=>Dialog(backgroundColor:Colors.black, child:Column(mainAxisSize:MainAxisSize.min, children:[ Image.memory(base64Decode(p.fotoPaqueteBase64)), SizedBox(height:8), Padding(padding:EdgeInsets.all(8), child:Text(p.descripcionPaquete, style:TextStyle(color:Colors.white))), TextButton(onPressed:()=>Navigator.pop(context), child:Text('CERRAR')) ]))); }, child:Container(margin:EdgeInsets.only(top:8), padding:EdgeInsets.symmetric(vertical:10), decoration:BoxDecoration(color:Color(0xFFD4AF37), borderRadius:BorderRadius.circular(8)), child:Row(mainAxisAlignment:MainAxisAlignment.center, children:[Icon(Icons.photo_camera, color:Colors.black, size:18), SizedBox(width:6), Text('VER FOTO DEL PAQUETE', style:TextStyle(color:Colors.black, fontWeight:FontWeight.w900, fontSize:11))]))),
+            SizedBox(height:8),
+            _infoRow(Icons.my_location, 'RECOGIDA', dirRecogidaCache[p.id]??'Cargando...'),
+            _infoRow(Icons.flag, 'ENTREGA', dirEntregaCache[p.id]??'Cargando...'),
+            SizedBox(height:6),
+            Container(padding:EdgeInsets.all(10), decoration:BoxDecoration(color:Colors.black, borderRadius:BorderRadius.circular(10)), child:Column(children:[ _infoRow(Icons.route, 'Pedido', '${p.km.toStringAsFixed(2)} km - ${p.tiempo} min'), _infoRow(Icons.motorcycle, 'Tú a recogida', '${kmARecogida.toStringAsFixed(2)} km - $minARecogida min'), ])),
+            SizedBox(height:10),
+            Row(children:[
+              Expanded(child:OutlinedButton(style:OutlinedButton.styleFrom(side:BorderSide(color:Colors.redAccent.withOpacity(0.5))), onPressed:()=>rechazarPedido(p), child:Text('✕ RECHAZAR', style:TextStyle(color:Colors.redAccent, fontSize:11, fontWeight:FontWeight.bold)))),
+              SizedBox(width:6),
+              Expanded(child:OutlinedButton(style:OutlinedButton.styleFrom(side:BorderSide(color:Colors.white24)), onPressed:()=>mostrarOfertar(p), child:Text('OFERTAR', style:TextStyle(color:Colors.white70, fontSize:11)))),
+              SizedBox(width:6),
+              Expanded(flex:2, child:ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Color(0xFFD4AF37), foregroundColor:Colors.black), onPressed:()=>aceptarDirecto(p), child:Text('ACEPTAR \$${p.precioCliente.toStringAsFixed(2)}', style:TextStyle(fontWeight:FontWeight.w900, fontSize:11))))
+            ])
+          ]), );
+        }))
+      ])
+    );
+  }
+}
+class PantallaRanking extends StatelessWidget{
+  @override Widget build(BuildContext context){
+    var ranking = RankingService.getRanking();
+    var top3 = ranking.take(3).toList();
+    var resto = ranking.skip(3).toList();
+
+    return Scaffold(backgroundColor:Colors.black,
+      appBar:AppBar(backgroundColor:Colors.black,
+        leading: IconButton(icon:Icon(Icons.arrow_back, color:Colors.white), onPressed:()=> Navigator.pop(context)),
+        title:Text('RANKING WANKI', style:TextStyle(color:Color(0xFFD4AF37), fontWeight:FontWeight.w900, letterSpacing:2)),
+        centerTitle:true,
+      ),
+      body: Column(children:[
+        Container(width:double.infinity, padding:EdgeInsets.all(14),
+          decoration:BoxDecoration(gradient:LinearGradient(colors:[Color(0xFFD4AF37).withOpacity(0.25), Colors.black])),
+          child: Column(children:[
+            Text('🏆 PREMIO SEMANAL 🏆', style:TextStyle(color:Color(0xFFD4AF37), fontSize:10, letterSpacing:3, fontWeight:FontWeight.bold)),
+            SizedBox(height:6),
+            Text('¡LLEGA A #1 Y PAGA SOLO 8.1%!', style:TextStyle(color:Colors.white, fontSize:16, fontWeight:FontWeight.w900)),
+            Text('En vez de 11.8% • Te ahorras \$3.70 por cada \$100', style:TextStyle(color:Color(0xFF00FF88), fontSize:11, fontWeight:FontWeight.bold)),
+          ])
+        ),
+        SizedBox(height:16),
+        Padding(padding:EdgeInsets.symmetric(horizontal:12),
+          child: Row(crossAxisAlignment:CrossAxisAlignment.end, children:[
+            Expanded(child: _podioItem(top3.length>1? top3[1] : null, 2, Colors.grey[400]!, 90)),
+            SizedBox(width:8),
+            Expanded(child: _podioItem(top3.isNotEmpty? top3[0] : null, 1, Color(0xFFD4AF37), 120)),
+            SizedBox(width:8),
+            Expanded(child: _podioItem(top3.length>2? top3[2] : null, 3, Color(0xFFCD7F32), 80)),
+          ])
+        ),
+        SizedBox(height:20),
+        // LISTA DE ABAJO - AQUÍ ESTABA EL ERROR
+        Expanded(child: ListView.builder(padding:EdgeInsets.all(12), itemCount:resto.length, itemBuilder:(c,i){
+          var m = resto[i];
+          int posReal = i+4;
+          return Container(margin:EdgeInsets.only(bottom:8), padding:EdgeInsets.all(10),
+            decoration:BoxDecoration(color:Color(0xFF1A1A1A), borderRadius:BorderRadius.circular(12), border:Border.all(color:Colors.white10)),
+            child: Row(children:[
+              Container(width:30, child:Text('#$posReal', style:TextStyle(color:Colors.white38, fontWeight:FontWeight.bold))),
+              // ESTO ES LO QUE NO ENTENDÍAS - AHORA ES ASÍ:
+              CircleAvatar(radius:18, backgroundColor: Color(0xFFD4AF37), child: Text(m.nombre[0], style:TextStyle(color:Colors.black, fontWeight:FontWeight.w900))),
+              SizedBox(width:10),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start, children:[
+                Text(m.nombre, style:TextStyle(color:Colors.white, fontWeight:FontWeight.bold, fontSize:11)),
+                Text('${m.viajes} viajes • ${m.puntos} pts', style:TextStyle(color:Colors.white38, fontSize:9)),
+              ])),
+              Column(crossAxisAlignment:CrossAxisAlignment.end, children:[
+                Text('${m.comision}%', style:TextStyle(color:m.comision==10.8?Colors.white54:Color(0xFFD4AF37), fontWeight:FontWeight.w900, fontSize:12)),
+                Text('COMISIÓN', style:TextStyle(color:Colors.white24, fontSize:7))
+              ])
+            ])
+          );
+                }))
+      ])
+    );
+  }
+
+  Widget _podioItem(RankingMoto? m, int puesto, Color color, double altura){
+    if(m==null) return SizedBox();
+    bool esPrimero = puesto==1;
+    return Column(children:[
+      Stack(alignment:Alignment.topCenter, children:[
+        CircleAvatar(radius: esPrimero? 36 : 28, backgroundColor: color, child: Text(m.nombre.split(' ').last[0], style:TextStyle(color:Colors.black, fontWeight:FontWeight.w900, fontSize: esPrimero?24:18))),
+        if(esPrimero) Positioned(top:-2, child: Text('👑', style:TextStyle(fontSize:22))),
+      ]),
+      SizedBox(height:6),
+      Text(m.nombre.split(' - ').last, style:TextStyle(color:Colors.white, fontWeight:FontWeight.w900, fontSize: esPrimero?12:10), maxLines:1),
+      Text('${m.puntos} pts', style:TextStyle(color:color, fontSize:9, fontWeight:FontWeight.bold)),
+      SizedBox(height:6),
+      Container(height: altura, width:double.infinity,
+        decoration:BoxDecoration(color: color.withOpacity(0.9), borderRadius:BorderRadius.vertical(top:Radius.circular(12)), boxShadow:[BoxShadow(color:color.withOpacity(0.4), blurRadius: esPrimero?15:8)]),
+        child: Column(mainAxisAlignment:MainAxisAlignment.center, children:[
+          Text('#$puesto', style:TextStyle(color:Colors.black, fontWeight:FontWeight.w900, fontSize: esPrimero?26:18)),
+          Text('${m.comision}%', style:TextStyle(color:Colors.black, fontWeight:FontWeight.w900, fontSize: esPrimero?16:12)),
+          if(esPrimero) Text('🔥 8.1%', style:TextStyle(color:Colors.black, fontWeight:FontWeight.w900, fontSize:10)),
+        ])
+      )
+    ]);
+  }
+}
+
+class PantallaRecargaMoto extends StatefulWidget { @override State<PantallaRecargaMoto> createState()=> _PantallaRecargaMotoState(); }
+class _PantallaRecargaMotoState extends State<PantallaRecargaMoto> {
+  TextEditingController montoCtrl = TextEditingController(text:'10.00');
+  TextEditingController transCtrl = TextEditingController();
+  String? fotoBase64; XFile? fotoFile; final picker = ImagePicker();
+  Future<void> tomarFoto() async {
+    var f = await picker.pickImage(source: ImageSource.gallery, imageQuality:30);
+    if(f!=null){ var bytes = await f.readAsBytes(); setState((){ fotoFile=f; fotoBase64=base64Encode(bytes); }); }
+  }
+  void enviarSolicitud() {
+    double monto = double.tryParse(montoCtrl.text)??0;
+    if(monto < 5){ ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Mínimo \$5'))); return; }
+    if(fotoBase64==null){ ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Sube el comprobante'))); return; }
+    if(transCtrl.text.isEmpty){ ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Pon el # de transacción'))); return; }
+    var sol = SolicitudRecarga(id:DateTime.now().millisecondsSinceEpoch.toString(), monto:monto, comprobanteBase64:fotoBase64!, numTransaccion:transCtrl.text, fecha:DateTime.now());
+    RecargasPendientesService.guardar(sol);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('✅ Solicitud enviada. Se aprobará en minutos'), backgroundColor:Color(0xFF00FF88)));
+    Navigator.pop(context);
+  }
+  @override Widget build(BuildContext context){
+    return Scaffold(backgroundColor:Colors.black,
+      appBar:AppBar(backgroundColor:Colors.black, title:Text('RECARGA SALDO', style:TextStyle(color:Color(0xFFD4AF37), fontWeight:FontWeight.w900))),
+      body:SingleChildScrollView(padding:EdgeInsets.all(16), child:Column(crossAxisAlignment:CrossAxisAlignment.start, children:[
+        Container(padding:EdgeInsets.all(14), decoration:BoxDecoration(color:Color(0xFFD4AF37).withOpacity(0.15), borderRadius:BorderRadius.circular(14), border:Border.all(color:Color(0xFFD4AF37))), child:Column(crossAxisAlignment:CrossAxisAlignment.start, children:[
+          Text('DEPOSITA AQUÍ:', style:TextStyle(color:Color(0xFFD4AF37), fontSize:10, fontWeight:FontWeight.w900)),
+          SizedBox(height:6),
+          Text('BANCO PICHINCHA', style:TextStyle(color:Colors.white, fontWeight:FontWeight.w900)),
+          Text('Cuenta Ahorros: 2216580792', style:TextStyle(color:Colors.white, fontSize:16, fontWeight:FontWeight.w900)),
+          Text('Titular: WANKIDRIVE / WANKI', style:TextStyle(color:Colors.white70, fontSize:12)),
+        ])),
+        SizedBox(height:16),
+        Text('Monto que transferiste', style:TextStyle(color:Colors.white70, fontSize:11)),
+        TextField(controller:montoCtrl, keyboardType:TextInputType.number, style:TextStyle(color:Colors.white, fontWeight:FontWeight.w900, fontSize:22), decoration:InputDecoration(prefixText:'\$ ', filled:true, fillColor:Color(0xFF1A1A1A), border:OutlineInputBorder(borderRadius:BorderRadius.circular(12)))),
+        SizedBox(height:12),
+        Text('Número de transacción', style:TextStyle(color:Colors.white70, fontSize:11)),
+        TextField(controller:transCtrl, style:TextStyle(color:Colors.white), decoration:InputDecoration(hintText:'Ej: 123456789', hintStyle:TextStyle(color:Colors.white24), filled:true, fillColor:Color(0xFF1A1A1A), border:OutlineInputBorder(borderRadius:BorderRadius.circular(12)))),
+        SizedBox(height:12),
+        GestureDetector(onTap:tomarFoto, child:Container(width:double.infinity, padding:EdgeInsets.all(16), decoration:BoxDecoration(color:fotoBase64!=null? Color(0xFF00FF88).withOpacity(0.15) : Color(0xFF1A1A1A), borderRadius:BorderRadius.circular(12), border:Border.all(color:fotoBase64!=null? Color(0xFF00FF88): Colors.white24)), child:Column(children:[Icon(fotoBase64!=null? Icons.check_circle: Icons.upload_file, color:fotoBase64!=null? Color(0xFF00FF88): Colors.white54, size:30), Text(fotoBase64!=null? 'Comprobante listo ✓': 'SUBIR FOTO DEL COMPROBANTE *', style:TextStyle(color:fotoBase64!=null? Color(0xFF00FF88): Colors.white, fontWeight:FontWeight.bold)),]))),
+        SizedBox(height:20),
+        SizedBox(width:double.infinity, child:ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Color(0xFFD4AF37), padding:EdgeInsets.symmetric(vertical:16)), onPressed:enviarSolicitud, child:Text('ENVIAR COMPROBANTE', style:TextStyle(color:Colors.black, fontWeight:FontWeight.w900)))),
+        SizedBox(height:20),
+        GestureDetector(
+          onTap: (){ Navigator.push(context, MaterialPageRoute(builder:(_)=> PantallaLoginAdmin())); },
+          child: Text('Tu saldo actual: \$${SaldoPrepagoService.getSaldo().toStringAsFixed(2)}', style:TextStyle(color:Color(0xFF00FF88), fontWeight:FontWeight.w900)),
         )
-        .subscribe();
-}
-
-
-function mostrarEstadoPedido(data) {
-
-    const estadoTexto = {
-        disponible: '⏳ Disponible — esperando motorizado',
-        aceptado: '🏍️ Aceptado por ' + (data.motorizado_nombre || 'motorizado'),
-        recogido: '📦 En camino a entrega',
-        entregado: '✅ Entregado'
-    }[data.estado] || data.estado;
-
-    $('trackResult').innerHTML = `
-        <div class="order">
-            <p><b>Estado:</b> ${estadoTexto}</p>
-
-            <p>
-                <b>Oferta:</b>
-                $${Number(data.oferta || 0).toFixed(2)}
-            </p>
-
-            ${
-                data.motorizado_nombre
-                ? `
-                <p>
-                    <b>Motorizado:</b>
-                    ${data.motorizado_nombre}
-                    · ${data.motorizado_telefono || ''}
-                </p>
-                `
-                : ''
-            }
-        </div>
-    `;
-
-   // 🔔 NOTIFICACIONES POR PEDIDO
-
-const claveEstado = 'valle_estado_' + data.id;
-
-const estadoAnterior = localStorage.getItem(claveEstado);
-
-// Guardar el estado inicial sin notificar
-if (!estadoAnterior) {
-    localStorage.setItem(claveEstado, data.estado);
-    window.ultimoEstadoPedido = data.estado;
-    return;
-}
-
-// 🏍️ PEDIDO ACEPTADO
-if (
-    data.estado === 'aceptado' &&
-    estadoAnterior === 'disponible'
-) {
-    alert(
-        '🏍️ ¡TU PEDIDO FUE ACEPTADO!\n\n' +
-        'Motorizado: ' +
-        (data.motorizado_nombre || 'Motorizado') +
-        '\nWhatsApp: ' +
-        (data.motorizado_telefono || 'No disponible')
+      ]))
     );
+  }
 }
 
-// 📦 PEDIDO RECOGIDO
-if (
-    data.estado === 'recogido' &&
-    estadoAnterior === 'aceptado'
-) {
-    alert(
-        '📦 ¡TU PEDIDO FUE RECOGIDO!\n\n' +
-        'El motorizado ya tiene tu pedido.\n' +
-        'Va en camino hacia la entrega.'
-    );
+class PantallaLoginAdmin extends StatefulWidget {
+  @override State<PantallaLoginAdmin> createState()=> _PantallaLoginAdminState();
 }
-
-// ✅ PEDIDO ENTREGADO
-if (
-    data.estado === 'entregado' &&
-    estadoAnterior === 'recogido'
-) {
-    alert(
-        '✅ ¡PEDIDO ENTREGADO!\n\n' +
-        'Gracias por usar Valle Entregas.'
-    );
-}
-
-// Guardar el nuevo estado
-localStorage.setItem(claveEstado, data.estado);
-window.ultimoEstadoPedido = data.estado;
-}
-    // ===================================== MOTORIZADO: DISPONIBILIDAD =====================================
-function setDisponible(si) {
-    estaDisponible = si;
-    $('statusDot').className = `status-dot ${si ? 'online' : 'offline'}`;
-    $('statusText').innerHTML = `<b>Estado:</b> ${si ? '✅ DISPONIBLE — recibiendo pedidos' : '🔴 Fuera de servicio'}`;
-    $('btnDisponible').disabled = si;
-    $('btnNoDisponible').disabled = !si;
-    
-    localStorage.setItem('valleDisponible', si);
-    if (si) {
-        cargarPedidosMotorizado();
-        suscribirTiempoReal();
+class _PantallaLoginAdminState extends State<PantallaLoginAdmin> {
+  TextEditingController pinCtrl = TextEditingController();
+  String pinSecreto = "WANKI2026";
+  void validar(){
+    if(pinCtrl.text == pinSecreto){
+      Navigator.pushReplacement(context, MaterialPageRoute(builder:(_)=> PantallaAdminRecargas()));
     } else {
-        if (canalTiempoReal) canalTiempoReal.unsubscribe();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('⛔ CLAVE INCORRECTA'), backgroundColor:Colors.red));
     }
-}
-
-function recuperarEstadoMotorizado() {
-    if (localStorage.getItem('valleMotorizadoNombre')) {
-        $('nombreMotorizado').value = localStorage.getItem('valleMotorizadoNombre');
-        $('telefonoMotorizado').value = localStorage.getItem('valleMotorizadoTelefono');
-    }
-    const guardado = localStorage.getItem('valleDisponible');
-    if (guardado === 'true') setDisponible(true);
-}
-
-// ===================================== MOTORIZADO: UBICACIÓN =====================================
-async function guardarUbicacion() {
-    if (!navigator.geolocation) return alert('GPS no disponible');
-    const nombre = $('nombreMotorizado').value.trim();
-    const tel = $('telefonoMotorizado').value.trim();
-    if (!nombre || !tel) return alert('Escribe tu nombre y WhatsApp primero');
-    
-    navigator.geolocation.getCurrentPosition(
-        async pos => {
-            motorizadoUbicacion = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-            $('ubicacionStatus').innerHTML = `Ubicación: ✅ Registrada`;
-            
-            localStorage.setItem('valleMotorizadoNombre', nombre);
-            localStorage.setItem('valleMotorizadoTelefono', tel);
-            localStorage.setItem('valleLat', pos.coords.latitude);
-            localStorage.setItem('valleLng', pos.coords.longitude);
-            
-            await db.from('motorizados').upsert({
-                nombre, telefono: tel, lat: pos.coords.latitude, lng: pos.coords.longitude, activo: estaDisponible, actualizado: new Date().toISOString()
-            });
-            
-            alert('✅ Ubicación guardada correctamente');
-        },
-        () => alert('❌ No se pudo obtener la ubicación'),
-        { enableHighAccuracy: true }
+  }
+  @override Widget build(BuildContext context){
+    return Scaffold(backgroundColor:Colors.black,
+      appBar:AppBar(backgroundColor:Colors.black, title:Text('ADMIN LOGIN', style:TextStyle(color:Color(0xFFD4AF37), fontWeight:FontWeight.w900))),
+      body:Padding(padding:EdgeInsets.all(24), child:Column(mainAxisAlignment:MainAxisAlignment.center, children:[
+        Icon(Icons.admin_panel_settings, color:Color(0xFFD4AF37), size:80),
+        SizedBox(height:20),
+        Text('ACCESO SOLO ADMINISTRADOR', style:TextStyle(color:Colors.white, fontWeight:FontWeight.w900, letterSpacing:1)),
+        SizedBox(height:20),
+        TextField(controller:pinCtrl, obscureText:true, style:TextStyle(color:Colors.white, letterSpacing:5, fontWeight:FontWeight.w900), textAlign:TextAlign.center, decoration:InputDecoration(hintText:'PIN SECRETO', hintStyle:TextStyle(color:Colors.white24), filled:true, fillColor:Color(0xFF1A1A1A), border:OutlineInputBorder(borderRadius:BorderRadius.circular(14)))),
+        SizedBox(height:16),
+        SizedBox(width:double.infinity, child:ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Color(0xFFD4AF37), padding:EdgeInsets.symmetric(vertical:16)), onPressed:validar, child:Text('ENTRAR', style:TextStyle(color:Colors.black, fontWeight:FontWeight.w900)))),
+      ]))
     );
+  }
 }
 
-// ===================================== MOTORIZADO: CARGAR PEDIDOS =====================================
-async function cargarPedidosMotorizado() {
-    const lista = $('ordersList');
+class PantallaAdminRecargas extends StatefulWidget { @override State<PantallaAdminRecargas> createState()=> _AdminMasterState(); }
 
-    if (!db) {
-        lista.innerHTML =
-            '<p class="muted">Error: Supabase no está conectado.</p>';
-        return;
+class _AdminMasterState extends State<PantallaAdminRecargas> {
+  int tabIndex = 0; // 0=Recargas, 1=Motos, 2=Caja
+  List<SolicitudRecarga> solicitudes = [];
+  List<Map<String,dynamic>> motos = [];
+  String filtro = "";
+
+  @override void initState(){
+    super.initState();
+    solicitudes = RecargasPendientesService.getTodas();
+    _cargarMotos();
+  }
+  void _cargarMotos(){
+    // Cargamos motos de tu localStorage o de tu servicio
+    try{
+      var raw = html.window.localStorage['motos_wanki']?? '[]';
+      var list = jsonDecode(raw) as List;
+      motos = list.map((e)=> Map<String,dynamic>.from(e)).toList();
+    }catch(e){ motos = []; }
+    // Si no hay motos, crea demo
+    if(motos.isEmpty){
+      motos = [
+        {"nombre":"Moto Demo 1","placa":"ABC123","saldo":SaldoPrepagoService.getSaldo(),"telefono":"0990000001","bloqueado":false},
+        {"nombre":"Moto Demo 2","placa":"XYZ789","saldo":5.50,"telefono":"0990000002","bloqueado":false},
+      ];
     }
+    setState((){});
+  }
+  void _guardarMotos(){
+    html.window.localStorage['motos_wanki'] = jsonEncode(motos);
+  }
 
-    lista.innerHTML =
-        '<p class="muted">Buscando pedidos...</p>';
+  double get totalPendiente => solicitudes.where((s)=>s.estado=='pendiente').fold(0,(a,b)=>a+b.monto);
+  double get totalHoy => solicitudes.where((s)=>s.estado=='aprobado' && s.fecha.day==DateTime.now().day).fold(0,(a,b)=>a+b.monto);
+  double get totalMes => solicitudes.where((s)=>s.estado=='aprobado' && s.fecha.month==DateTime.now().month).fold(0,(a,b)=>a+b.monto);
 
-    try {
-        const { data, error } = await db
-            .from('pedidos')
-            .select('*')
-            .in('estado', ['disponible', 'aceptado', 'recogido'])
-            .order('fecha', { ascending: false })
-            .limit(25);
+  bool esDuplicado(SolicitudRecarga s){
+    return solicitudes.where((o)=> o.id!=s.id && o.numTransaccion==s.numTransaccion).isNotEmpty;
+  }
 
-        if (error) {
-            console.error('Error cargando pedidos:', error);
-
-            lista.innerHTML =
-                '<p class="muted">Error al cargar pedidos: ' +
-                error.message +
-                '</p>';
-
-            return;
-        }
-
-        if (!data || data.length === 0) {
-            lista.innerHTML =
-                '<p class="muted">No hay pedidos disponibles por ahora</p>';
-            return;
-        }
-
-        if (
-            !$('nombreMotorizado').value &&
-            localStorage.getItem('valleMotorizadoNombre')
-        ) {
-            $('nombreMotorizado').value =
-                localStorage.getItem('valleMotorizadoNombre');
-
-            $('telefonoMotorizado').value =
-                localStorage.getItem('valleMotorizadoTelefono') || '';
-        }
-
-        const miTel = $('telefonoMotorizado').value.trim();
-
-        lista.innerHTML = data.map(p => {
-            const esNuevo = !idsVistos.has(String(p.id));
-
-            if (esNuevo) {
-                idsVistos.add(String(p.id));
-            }
-
-            const mio =
-                String(p.motorizado_telefono || '').trim() === miTel &&
-                miTel !== '';
-
-            const oferta = Number(p.oferta || 0).toFixed(2);
-            const minimo = Number(p.tarifa_minima || 0).toFixed(2);
-
-            const etiquetas = {
-                disponible:
-                    '<span class="pill nuevo">🆕 DISPONIBLE</span>',
-                aceptado:
-                    '<span class="pill aceptado">🏍️ EN CAMINO</span>',
-                recogido:
-                    '<span class="pill">📦 EN ENTREGA</span>'
-            };
-
-            const etiqueta = etiquetas[p.estado] || '';
-
-            return `
-            <div class="order ${esNuevo && p.estado === 'disponible' ? 'nuevo' : ''}">
-                ${etiqueta}
-
-                <p><b>Cliente:</b> ${p.cliente_nombre || ''} · ${p.cliente_telefono || ''}</p>
-
-                <p><b>Recoger:</b> ${p.recogida_zona || ''} → ${p.recogida_referencia || ''}</p>
-
-                <p><b>Entregar:</b> ${p.entrega_zona || ''} → ${p.entrega_referencia || ''}</p>
-
-                <p><b>Detalle:</b> ${p.detalle || ''}</p>
-
-                <div class="oferta-box">
-                    💰 Oferta del cliente:
-                    <span class="precio-oferta">$${oferta}</span>
-                    <small>(Mínimo: $${minimo})</small>
-                </div>
-
-                ${p.estado === 'disponible' ? `
-                <div class="actions">
-<button
-    type="button"
-    onclick="window.aceptarPedido('${p.id}', ${Number(p.entrega_lat) || 0}, ${Number(p.entrega_lng) || 0}); return false;">
-    ✅ ACEPTAR ESTE PEDIDO
-</button>
-
-                    <button class="secondary"
-                        onclick="verRuta(${Number(p.recogida_lat) || 0},${Number(p.recogida_lng) || 0})">
-                        📍 Ver recogida
-                    </button>
-                </div>` : ''}
-
-              ${p.estado === 'aceptado' && mio ? `
-<div class="actions" style="position:relative;z-index:99999;">
-    <button
-        type="button"
-        style="position:relative;z-index:100000;pointer-events:auto;cursor:pointer;"
-        onpointerdown="event.preventDefault(); event.stopPropagation(); window.marcarRecogido('${String(p.id)}');">
-        📦 PEDIDO RECOGIDO
-    </button>
-
-    <button
-        type="button"
-        class="secondary"
-        onclick="verRuta(${Number(p.entrega_lat) || 0},${Number(p.entrega_lng) || 0}); return false;">
-        📍 Ruta entrega
-    </button>
-</div>` : ''}
-
-              ${p.estado === 'recogido' && mio ? `
-<div class="actions" style="position:relative;z-index:99999;">
-    <button
-        type="button"
-        style="position:relative;z-index:100000;pointer-events:auto;cursor:pointer;"
-        onpointerdown="event.preventDefault(); event.stopPropagation(); window.marcarEntregado('${String(p.id)}');">
-        ✅ MARCAR ENTREGADO
-    </button>
-</div>` : ''}
-
-                ${p.estado === 'aceptado' && !mio ?
-                    '<p class="muted">Aceptado por otro motorizado</p>' : ''}
-            </div>`;
-        }).join('');
-
-    } catch (error) {
-        console.error('Error inesperado:', error);
-
-        lista.innerHTML =
-            '<p class="muted">Error: ' + error.message + '</p>';
-    }
-}
-// ===================================== TUS 3 FUNCIONES =====================================
-
-window.aceptarPedido = async function(id, lat, lng) {
-    alert("🔵 BOTÓN ACEPTAR FUNCIONA\nPedido ID: " + id);
-
-    if (!db) {
-        alert("❌ Base de datos no disponible.");
-        return;
-    }
-
-    const nombre = $("nombreMotorizado").value.trim();
-    const tel = $("telefonoMotorizado").value.trim();
-
-    if (!nombre || !tel) {
-        alert("⚠️ Escribe tu nombre y WhatsApp primero.");
-        return;
-    }
-
-    if (!estaDisponible) {
-        alert("⚠️ Primero debes estar DISPONIBLE.");
-        return;
-    }
-
-    const confirmar = confirm(
-        "¿Quieres aceptar este pedido?\n\n" +
-        "Al aceptarlo quedará asignado a ti."
+  @override Widget build(BuildContext context){
+    return Scaffold(backgroundColor:Colors.black,
+      appBar:AppBar(backgroundColor:Colors.black, title:Text(['RECARGAS','MOTORIZADOS','CAJA'][tabIndex], style:TextStyle(color:Color(0xFFD4AF37), fontWeight:FontWeight.w900)), actions:[
+        IconButton(icon:Icon(Icons.refresh, color:Colors.white), onPressed:(){ setState(()=> solicitudes = RecargasPendientesService.getTodas()); _cargarMotos(); })
+      ]),
+      body: [ _buildRecargas(), _buildMotos(), _buildCaja() ][tabIndex],
+      bottomNavigationBar: BottomNavigationBar(backgroundColor:Color(0xFF1A1A1A), selectedItemColor:Color(0xFFD4AF37), unselectedItemColor:Colors.white30, currentIndex:tabIndex, onTap:(i)=>setState(()=>tabIndex=i), items:[
+        BottomNavigationBarItem(icon:Icon(Icons.receipt_long), label:'Recargas'),
+        BottomNavigationBarItem(icon:Icon(Icons.motorcycle), label:'Motos'),
+        BottomNavigationBarItem(icon:Icon(Icons.account_balance_wallet), label:'Caja'),
+      ]),
     );
-
-    if (!confirmar) return;
-
-    alert("🟡 CONECTANDO CON SUPABASE...");
-
-    try {
-
-        const { data, error } = await db.rpc("aceptar_pedido", {
-           p_id: String(id),
-            p_nombre: nombre,
-            p_telefono: tel
-        });
-
-        console.log("RESPUESTA:", data);
-        console.log("ERROR:", error);
-
-        if (error) {
-            alert(
-                "🔴 SUPABASE DIO ERROR:\n\n" +
-                error.message
-            );
-            return;
-        }
-
-        if (!data || data.length === 0) {
-            alert(
-                "⚠️ SUPABASE RESPONDIÓ PERO NO ACEPTÓ EL PEDIDO.\n\n" +
-                "El pedido posiblemente ya no está disponible."
-            );
-
-            await cargarPedidosMotorizado();
-            return;
-        }
-
-        localStorage.setItem(
-            "valleMotorizadoNombre",
-            nombre
-        );
-
-        localStorage.setItem(
-            "valleMotorizadoTelefono",
-            tel
-        );
-
-        alert("🟢 ¡PEDIDO ACEPTADO CORRECTAMENTE!");
-
-        await cargarPedidosMotorizado();
-
-    } catch (error) {
-
-        console.error("ERROR COMPLETO:", error);
-
-        alert(
-            "🔴 ERROR:\n\n" +
-            error.message
-        );
-    }
-};
-    window.marcarRecogido = async function(id) {
-
-    alert("🔵 BOTÓN RECOGIDO FUNCIONA\nID: " + id);
-
-    if (!db) {
-        alert("❌ Base de datos no disponible.");
-        return;
-    }
-
-    const tel = $("telefonoMotorizado").value.trim();
-
-    if (!tel) {
-        alert("⚠️ Escribe tu WhatsApp primero.");
-        return;
-    }
-
-    const confirmar = confirm("¿Ya recogiste el pedido?");
-
-    if (!confirmar) return;
-
-    alert("🟡 MARCANDO PEDIDO COMO RECOGIDO...");
-
-    try {
-
-        const { data, error } = await db.rpc(
-            "marcar_pedido_recogido",
-            {
-                p_id: String(id),
-                p_telefono: tel
-            }
-        );
-
-        console.log("RECOGIDO DATA:", data);
-        console.log("RECOGIDO ERROR:", error);
-
-        if (error) {
-            alert(
-                "🔴 ERROR SUPABASE:\n\n" +
-                error.message
-            );
-            return;
-        }
-
-        if (data !== true) {
-            alert(
-                "⚠️ NO SE PUDO MARCAR COMO RECOGIDO.\n\n" +
-                "El pedido debe estar aceptado y asignado a tu WhatsApp."
-            );
-            return;
-        }
-
-        alert("📦 ¡PEDIDO MARCADO COMO RECOGIDO!");
-
-        await cargarPedidosMotorizado();
-
-    } catch (error) {
-
-        console.error("ERROR COMPLETO:", error);
-
-        alert(
-            "🔴 ERROR:\n\n" +
-            error.message
-        );
-    }
-};
-    window.marcarRecogido = async function(id) {
-
-    alert("🔵 BOTÓN RECOGIDO FUNCIONA\nID: " + id);
-
-    if (!db) {
-        alert("❌ Base de datos no disponible.");
-        return;
-    }
-
-    const tel = $("telefonoMotorizado").value.trim();
-
-    if (!tel) {
-        alert("⚠️ Escribe tu WhatsApp primero.");
-        return;
-    }
-
-    const confirmar = confirm("¿Ya recogiste el pedido?");
-
-    if (!confirmar) return;
-
-    alert("🟡 MARCANDO PEDIDO COMO RECOGIDO...");
-
-    try {
-
-        const { data, error } = await db.rpc(
-            "marcar_pedido_recogido",
-            {
-                p_id: String(id),
-                p_telefono: tel
-            }
-        );
-
-        console.log("RECOGIDO DATA:", data);
-        console.log("RECOGIDO ERROR:", error);
-
-        if (error) {
-            alert(
-                "🔴 ERROR SUPABASE:\n\n" +
-                error.message
-            );
-            return;
-        }
-
-        if (data !== true) {
-            alert(
-                "⚠️ NO SE PUDO MARCAR COMO RECOGIDO.\n\n" +
-                "El pedido debe estar aceptado y asignado a tu WhatsApp."
-            );
-            return;
-        }
-
-        alert("📦 ¡PEDIDO MARCADO COMO RECOGIDO!");
-
-        await cargarPedidosMotorizado();
-
-    } catch (error) {
-
-        console.error("ERROR COMPLETO:", error);
-
-        alert(
-            "🔴 ERROR:\n\n" +
-            error.message
-        );
-    }
-};
-
-
-/* ⬇️ AQUÍ EMPIEZA LA NUEVA FUNCIÓN */
-
-window.marcarEntregado = async function(id) {
-
-    alert("🔵 BOTÓN ENTREGADO FUNCIONA\nID: " + id);
-
-    if (!db) {
-        alert("❌ Base de datos no disponible.");
-        return;
-    }
-
-    const tel = $("telefonoMotorizado").value.trim();
-
-    if (!tel) {
-        alert("⚠️ Escribe tu WhatsApp primero.");
-        return;
-    }
-
-    const confirmar = confirm("¿Ya entregaste el pedido al cliente?");
-
-    if (!confirmar) return;
-
-    alert("🟡 MARCANDO PEDIDO COMO ENTREGADO...");
-
-    try {
-
-        const { data, error } = await db.rpc(
-            "marcar_pedido_entregado",
-            {
-                p_id: String(id),
-                p_telefono: tel
-            }
-        );
-
-        console.log("ENTREGADO DATA:", data);
-        console.log("ENTREGADO ERROR:", error);
-
-        if (error) {
-            alert(
-                "🔴 ERROR SUPABASE:\n\n" +
-                error.message
-            );
-            return;
-        }
-
-        if (data !== true) {
-            alert(
-                "⚠️ NO SE PUDO MARCAR COMO ENTREGADO.\n\n" +
-                "El pedido debe estar recogido y asignado a tu WhatsApp."
-            );
-            return;
-        }
-
-        alert("🟢 ¡PEDIDO MARCADO COMO ENTREGADO!");
-
-        await cargarPedidosMotorizado();
-
-    } catch (error) {
-
-        console.error("ERROR COMPLETO:", error);
-
-        alert(
-            "🔴 ERROR:\n\n" +
-            error.message
-        );
-    }
-};
-// ===================================== RUTA Y ALERTAS =====================================
-function verRuta(lat, lng) {
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+  }
+
+  // ================= TAB 1: RECARGAS =================
+  Widget _buildRecargas(){
+    var lista = solicitudes.where((s)=> s.numTransaccion.contains(filtro) || filtro.isEmpty).toList();
+    var pendientes = lista.where((s)=>s.estado=='pendiente').toList();
+    return Column(children:[
+      Padding(padding:EdgeInsets.all(12), child:Row(children:[
+        Expanded(child:_stat('POR APROBAR','\$${totalPendiente.toStringAsFixed(2)}',Colors.orange)),
+        SizedBox(width:8),
+        Expanded(child:_stat('HOY','\$${totalHoy.toStringAsFixed(2)}',Color(0xFF00FF88))),
+        SizedBox(width:8),
+        Expanded(child:_stat('MES','\$${totalMes.toStringAsFixed(2)}',Colors.white)),
+      ])),
+      Padding(padding:EdgeInsets.symmetric(horizontal:12), child:TextField(onChanged:(v)=>setState(()=>filtro=v), style:TextStyle(color:Colors.white, fontSize:12), decoration:InputDecoration(prefixIcon:Icon(Icons.search, color:Colors.white24, size:18), hintText:'Buscar # transacción...', hintStyle:TextStyle(color:Colors.white24, fontSize:11), filled:true, fillColor:Color(0xFF1A1A1A), border:OutlineInputBorder(borderRadius:BorderRadius.circular(10))))),
+      SizedBox(height:8),
+      Expanded(child: pendientes.isEmpty? Center(child:Text('No hay pendientes', style:TextStyle(color:Colors.white24))) : ListView.builder(padding:EdgeInsets.all(12), itemCount:pendientes.length, itemBuilder:(_,i){
+        var s = pendientes[i];
+        bool dup = esDuplicado(s);
+        return Container(margin:EdgeInsets.only(bottom:10), decoration:BoxDecoration(color:Color(0xFF1A1A1A), borderRadius:BorderRadius.circular(12), border:Border.all(color: dup? Colors.red : Color(0xFFD4AF37).withOpacity(0.3))), child:ListTile(
+          leading: Container(width:50,height:50, decoration:BoxDecoration(borderRadius:BorderRadius.circular(8), image:DecorationImage(image:MemoryImage(base64Decode(s.comprobanteBase64)), fit:BoxFit.cover))),
+          title: Text('\$${s.monto} - ${s.numTransaccion}', style:TextStyle(color:dup? Colors.redAccent: Colors.white, fontWeight:FontWeight.w900, fontSize:12)),
+          subtitle: Column(crossAxisAlignment:CrossAxisAlignment.start, children:[
+            Text(s.fecha.toString().substring(0,19), style:TextStyle(color:Colors.white30, fontSize:9)),
+            if(dup) Text('⚠️ TRANSACCIÓN DUPLICADA', style:TextStyle(color:Colors.red, fontSize:8, fontWeight:FontWeight.w900)),
+          ]),
+          trailing: Row(mainAxisSize:MainAxisSize.min, children:[
+            IconButton(icon:Icon(Icons.close, color:Colors.red, size:18), onPressed:(){ setState((){ s.estado='rechazado'; html.window.localStorage[RecargasPendientesService._key]=jsonEncode(solicitudes.map((e)=>e.toJson()).toList()); }); }),
+            IconButton(icon:Icon(Icons.check, color:Color(0xFF00FF88)), onPressed:(){ RecargasPendientesService.aprobar(s.id); setState(()=> solicitudes=RecargasPendientesService.getTodas()); }),
+          ]),
+          onTap:(){ showDialog(context:context, builder:(_)=>Dialog(backgroundColor:Colors.black, child:Image.memory(base64Decode(s.comprobanteBase64)))); },
+        ));
+      }))
+    ]);
+  }
+
+  // ================= TAB 2: MOTOS =================
+  Widget _buildMotos(){
+    var lista = motos.where((m)=> m['nombre'].toString().toLowerCase().contains(filtro.toLowerCase()) || m['placa'].toString().contains(filtro) || filtro.isEmpty).toList();
+    return Column(children:[
+      Padding(padding:EdgeInsets.all(12), child:TextField(onChanged:(v)=>setState(()=>filtro=v), style:TextStyle(color:Colors.white), decoration:InputDecoration(prefixIcon:Icon(Icons.search, color:Colors.white24), hintText:'Buscar moto por nombre o placa...', hintStyle:TextStyle(color:Colors.white24), filled:true, fillColor:Color(0xFF1A1A1A), border:OutlineInputBorder(borderRadius:BorderRadius.circular(10))))),
+      Expanded(child: ListView.builder(padding:EdgeInsets.all(12), itemCount:lista.length, itemBuilder:(_,i){
+        var m = lista[i];
+        return Container(margin:EdgeInsets.only(bottom:8), padding:EdgeInsets.all(12), decoration:BoxDecoration(color:Color(0xFF1A1A1A), borderRadius:BorderRadius.circular(12), border:Border.all(color: m['bloqueado']? Colors.red.withOpacity(0.4) : Colors.white10)), child:Row(children:[
+          CircleAvatar(backgroundColor: m['bloqueado']? Colors.red : Color(0xFFD4AF37), child:Text(m['nombre'][0], style:TextStyle(color:Colors.black, fontWeight:FontWeight.w900))),
+          SizedBox(width:10),
+          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start, children:[
+            Text(m['nombre'], style:TextStyle(color:m['bloqueado']? Colors.redAccent: Colors.white, fontWeight:FontWeight.w900, fontSize:12)),
+            Text('${m['placa']} • ${m['telefono']}', style:TextStyle(color:Colors.white38, fontSize:10)),
+            Text('Saldo: \$${(m['saldo'] as double).toStringAsFixed(2)}', style:TextStyle(color:Color(0xFF00FF88), fontSize:11, fontWeight:FontWeight.bold)),
+          ])),
+          Column(children:[
+            GestureDetector(onTap:(){ _dialogEditarSaldo(i); }, child:Container(padding:EdgeInsets.symmetric(horizontal:10,vertical:6), decoration:BoxDecoration(color:Color(0xFFD4AF37), borderRadius:BorderRadius.circular(8)), child:Text('SALDO', style:TextStyle(color:Colors.black, fontSize:9, fontWeight:FontWeight.w900)))),
+            SizedBox(height:4),
+            GestureDetector(onTap:(){ setState((){ motos[i]['bloqueado']=!motos[i]['bloqueado']; _guardarMotos(); }); }, child:Container(padding:EdgeInsets.symmetric(horizontal:10,vertical:4), decoration:BoxDecoration(color: m['bloqueado']? Colors.green.withOpacity(0.2) : Colors.red.withOpacity(0.2), borderRadius:BorderRadius.circular(8)), child:Text(m['bloqueado']? 'DESBLOQ':'BLOQUEAR', style:TextStyle(color: m['bloqueado']? Colors.green: Colors.red, fontSize:8, fontWeight:FontWeight.w900)))),
+          ])
+        ]));
+      }))
+    ]);
+  }
+
+  void _dialogEditarSaldo(int idx){
+    TextEditingController ctrl = TextEditingController(text: motos[idx]['saldo'].toString());
+    showDialog(context:context, builder:(_)=> AlertDialog(backgroundColor:Color(0xFF1A1A1A), title:Text('Editar saldo de ${motos[idx]['nombre']}', style:TextStyle(color:Colors.white, fontSize:14, fontWeight:FontWeight.w900)), content:TextField(controller:ctrl, keyboardType:TextInputType.number, style:TextStyle(color:Colors.white), decoration:InputDecoration(prefixText:'\$ ', filled:true, fillColor:Colors.black, border:OutlineInputBorder(borderRadius:BorderRadius.circular(10)))), actions:[
+      TextButton(onPressed:()=>Navigator.pop(context), child:Text('CANCELAR', style:TextStyle(color:Colors.white38))),
+      ElevatedButton(style:ElevatedButton.styleFrom(backgroundColor:Color(0xFFD4AF37)), onPressed:(){ double v = double.tryParse(ctrl.text)??0; setState(()=> motos[idx]['saldo']=v); _guardarMotos(); Navigator.pop(context); }, child:Text('GUARDAR', style:TextStyle(color:Colors.black, fontWeight:FontWeight.w900))),
+    ]));
+  }
+
+  // ================= TAB 3: CAJA =================
+  Widget _buildCaja(){
+    var aprobadas = solicitudes.where((s)=>s.estado=='aprobado').toList();
+    return Padding(padding:EdgeInsets.all(16), child:Column(children:[
+      _cajaCard('TOTAL APROBADO HOY', '\$${totalHoy.toStringAsFixed(2)}', Icons.today, Color(0xFF00FF88)),
+      SizedBox(height:12),
+      _cajaCard('TOTAL MES', '\$${totalMes.toStringAsFixed(2)}', Icons.calendar_month, Color(0xFFD4AF37)),
+      SizedBox(height:12),
+      _cajaCard('TOTAL HISTÓRICO', '\$${aprobadas.fold(0.0,(a,b)=>a+b.monto).toStringAsFixed(2)}', Icons.account_balance, Colors.white),
+      SizedBox(height:20),
+      Container(width:double.infinity, padding:EdgeInsets.all(14), decoration:BoxDecoration(color:Color(0xFF1A1A1A), borderRadius:BorderRadius.circular(12)), child:Column(crossAxisAlignment:CrossAxisAlignment.start, children:[
+        Text('RESUMEN', style:TextStyle(color:Colors.white38, fontSize:10, fontWeight:FontWeight.w900)),
+        SizedBox(height:8),
+        Text('Solicitudes totales: ${solicitudes.length}', style:TextStyle(color:Colors.white, fontSize:12)),
+        Text('Pendientes: ${solicitudes.where((s)=>s.estado=='pendiente').length}', style:TextStyle(color:Colors.orange, fontSize:12)),
+        Text('Aprobadas: ${aprobadas.length}', style:TextStyle(color:Color(0xFF00FF88), fontSize:12)),
+        Text('Rechazadas: ${solicitudes.where((s)=>s.estado=='rechazado').length}', style:TextStyle(color:Colors.redAccent, fontSize:12)),
+      ])),
+    ]));
+  }
+  Widget _stat(String t,String v,Color c){ return Container(padding:EdgeInsets.all(10), decoration:BoxDecoration(color:Color(0xFF1A1A1A), borderRadius:BorderRadius.circular(10), border:Border.all(color:c.withOpacity(0.3))), child:Column(crossAxisAlignment:CrossAxisAlignment.start, children:[ Text(t, style:TextStyle(color:Colors.white38, fontSize:8, fontWeight:FontWeight.w900)), SizedBox(height:4), Text(v, style:TextStyle(color:c, fontWeight:FontWeight.w900, fontSize:14)) ])); }
+  Widget _cajaCard(String t,String v,IconData ic,Color c){ return Container(width:double.infinity, padding:EdgeInsets.all(16), decoration:BoxDecoration(color:Color(0xFF1A1A1A), borderRadius:BorderRadius.circular(14), border:Border.all(color:c.withOpacity(0.3))), child:Row(children:[ Container(padding:EdgeInsets.all(10), decoration:BoxDecoration(color:c.withOpacity(0.15), borderRadius:BorderRadius.circular(10)), child:Icon(ic, color:c)), SizedBox(width:12), Column(crossAxisAlignment:CrossAxisAlignment.start, children:[ Text(t, style:TextStyle(color:Colors.white38, fontSize:9, fontWeight:FontWeight.w900)), Text(v, style:TextStyle(color:c, fontSize:22, fontWeight:FontWeight.w900)) ])])); }
 }
-
-function toggleAlertas() {
-
-    activarNotificacionesPush();
-    alertasActivas = !alertasActivas;
-    $('alertaBtn').textContent = alertasActivas ? '🔕 DESACTIVAR' : '🔔 ACTIVAR ALERTAS';
-    $('alertStatus').textContent = alertasActivas ? '✅ Revisando pedidos...' : 'Alertas desactivadas';
-    if (alertasActivas) suscribirTiempoReal();
-    else if (canalTiempoReal) canalTiempoReal.unsubscribe();
-}
-
-function suscribirTiempoReal() {
-    if (!db || canalTiempoReal) return;
-    canalTiempoReal = db.channel('pedidos-nuevos').on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'pedidos', filter: 'estado=eq.disponible'
-    }, payload => {
-        if (alertasActivas && estaDisponible) {
-            reproducirSonido();
-            mostrarAlerta(payload.new);
-            cargarPedidosMotorizado();
-        }
-    }).subscribe();
-}
-
-function mostrarAlerta(ped) {
-    const a = document.createElement('div');
-    a.className = 'alerta-flotante';
-    a.innerHTML = `🔔 NUEVO PEDIDO<br><b>${ped.recogida_zona} → ${ped.entrega_zona}</b><br>💰 $${ped.oferta.toFixed(2)}<br><button onclick="this.parentElement.remove()" style="margin-top:8px">Cerrar</button>`;
-    document.body.prepend(a);
-    setTimeout(() => a.remove(), 8000);
-}
-
-function reproducirSonido() {
-    try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.frequency.value = 880;
-        gain.gain.value = 0.2;
-        osc.start(); osc.stop(ctx.currentTime + 0.2);
-    } catch(e){}
-}
-
-// ===================================== INICIO =====================================
-window.addEventListener('load', () => {
-    initMaps();
-    if (sbReady) {
-        $('configWarn').className = 'notice success';
-        $('configWarn').textContent = '✅ Sistema conectado y listo';
-    }
-});
-</script>
-    <script>
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', async () => {
-        try {
-            await navigator.serviceWorker.register('./service-worker.js');
-            console.log('Valle Entregas: aplicación preparada');
-        } catch (error) {
-            console.error('Error registrando aplicación:', error);
-        }
-    });
-}
-```html id="x9g7kw"
-</script>
-
-<script>
-// =====================================
-// 🔔 VALLE ENTREGAS - NOTIFICACIONES PUSH
-// =====================================
-
-const VAPID_PUBLIC_KEY =
-"BFj0M-AKZ9rEKqzPDazep5G_ThnO9ED9WnFV4v-o8DJ4xWMBoUnu2iulp5ZhKUkBXfsT9MhNvB2vgyGFmG8oI0o";
-
-function convertirClaveVapid(base64String) {
-
-    const padding =
-        '='.repeat((4 - base64String.length % 4) % 4);
-
-    const base64 =
-        (base64String + padding)
-        .replace(/-/g, '+')
-        .replace(/_/g, '/');
-
-    const rawData = atob(base64);
-
-    return Uint8Array.from(
-        [...rawData].map(char => char.charCodeAt(0))
-    );
-}
-
-
-// REGISTRAR SERVICE WORKER
-if ('serviceWorker' in navigator) {
-
-    window.addEventListener('load', async () => {
-
-        try {
-
-            await navigator.serviceWorker.register(
-                './service-worker.js'
-            );
-
-            console.log(
-                '✅ Valle Entregas: Service Worker registrado'
-            );
-
-        } catch (error) {
-
-            console.error(
-                '❌ Error registrando Service Worker:',
-                error
-            );
-
-        }
-
-    });
-
-}
-
-
-// ACTIVAR NOTIFICACIONES
-async function activarNotificacionesPush() {
-
-    if (!('serviceWorker' in navigator)) {
-
-        alert(
-            '❌ Este dispositivo no admite notificaciones.'
-        );
-
-        return null;
-    }
-
-    if (!('PushManager' in window)) {
-
-        alert(
-            '❌ Este navegador no admite notificaciones push.'
-        );
-
-        return null;
-    }
-
-    try {
-
-        const permiso =
-            await Notification.requestPermission();
-
-        if (permiso !== 'granted') {
-
-            alert(
-                '⚠️ Debes permitir las notificaciones.'
-            );
-
-            return null;
-        }
-
-        const registro =
-            await navigator.serviceWorker.ready;
-
-        let suscripcion =
-            await registro.pushManager.getSubscription();
-
-        if (!suscripcion) {
-
-            suscripcion =
-                await registro.pushManager.subscribe({
-
-                    userVisibleOnly: true,
-
-                    applicationServerKey:
-                        convertirClaveVapid(
-                            VAPID_PUBLIC_KEY
-                        )
-
-                });
-        }
-
-        console.log(
-    '✅ NOTIFICACIONES ACTIVADAS:',
-    JSON.stringify(suscripcion)
-);
-
-// Guardar suscripción en Supabase
-try {
-
-    const telefono =
-        document.getElementById('telefonoMotorizado')?.value ||
-        document.getElementById('clienteTelefono')?.value ||
-        '';
-
-    const rol =
-        document.getElementById('telefonoMotorizado')
-            ? 'motorizado'
-            : 'cliente';
-
-    const { error } = await supabaseClient
-        .from('push_subscriptions')
-        .insert({
-            telefono: telefono,
-            rol: rol,
-            subscription: suscripcion.toJSON()
-        });
-
-    if (error) {
-        console.error(
-            '❌ Error guardando suscripción:',
-            error
-        );
-    } else {
-        console.log(
-            '✅ Suscripción guardada en Supabase'
-        );
-    }
-
-} catch (error) {
-
-    console.error(
-        '❌ Error guardando suscripción:',
-        error
-    );
-
-}
-
-return suscripcion;
-
-    } catch (error) {
-
-        console.error(
-            '❌ ERROR ACTIVANDO NOTIFICACIONES:',
-            error
-        );
-
-        alert(
-            '❌ No se pudieron activar las notificaciones.\n\n' +
-            error.message
-        );
-
-        return null;
-    }
-}
-
-</script>
-
-</body>
-</html>
